@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Smart Inventory - Gestionnaire codes</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #b8e1fc 0%, #e0f2fe 100%);
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(2px);
+            border-radius: 24px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.6);
+        }
+
+        .form-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        /* Ligne Dlv + désignation : côte à côte */
+        .row-dlv {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .row-dlv .field-group {
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .designation-text {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #0b3b5f;
+            background: transparent;
+            white-space: nowrap;
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        label {
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #0b3b5f;
+        }
+
+        input {
+            padding: 0.5rem 0.6rem;
+            border-radius: 20px;
+            border: 1.5px solid #facc15;
+            font-size: 0.75rem;
+            background: white;
+            width: 100%;
+        }
+
+        input[type="date"] {
+            font-size: 0.75rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #1e6f9f;
+            box-shadow: 0 0 0 2px rgba(30, 111, 159, 0.2);
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-ajouter {
+            background: #facc15;
+            color: #0b3b5f;
+            border: 1px solid #eab308;
+        }
+
+        .btn-ajouter:hover:not(:disabled) {
+            background: #ffd700;
+            transform: translateY(-1px);
+        }
+
+        .btn-ajouter:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .btn-nonbase {
+            background: white;
+            color: #b91c1c;
+            border: 2px solid #ef4444;
+        }
+
+        .btn-nonbase:hover {
+            background: #fee2e2;
+        }
+
+        .btn-exporter {
+            background: #0b3b5f;
+            color: white;
+        }
+
+        .btn-exporter:hover {
+            background: #1e6f9f;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #facc15;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        th {
+            background: #fef9e6;
+            padding: 0.6rem 0.5rem;
+            text-align: left;
+            font-weight: 700;
+            color: #0b3b5f;
+            border-bottom: 2px solid #facc15;
+        }
+
+        td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #fef3c7;
+            vertical-align: middle;
+        }
+
+        tr.ligne-hors-base {
+            background-color: #fee2e2 !important;
+        }
+        tr.ligne-hors-base td {
+            background-color: #fee2e2;
+        }
+
+        .delete-btn {
+            background: #dc2626;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            border: none;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background: #b91c1c;
+        }
+
+        .total {
+            background: #fef9e6;
+            font-weight: 800;
+            color: #0b3b5f;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.65rem;
+            color: #2c5a7a;
+        }
+
+        .valid {
+            border-color: #10b981 !important;
+            background-color: #f0fdf4;
+        }
+        .invalid {
+            border-color: #dc2626 !important;
+            background-color: #fef2f2;
+        }
+
+        @media (max-width: 550px) {
+            .row-dlv {
+                flex-wrap: wrap;
+            }
+            .btn-row {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="form-vertical">
+            <div class="field-group">
+                <label>🔍 Code barre / article *</label>
+                <input type="text" id="codeInput" placeholder="Scanner ou taper" autocomplete="off">
+            </div>
+
+            <div class="row-dlv">
+                <div class="field-group">
+                    <label>📅 Dlv (date)</label>
+                    <input type="date" id="dlv">
+                </div>
+                <span id="designationText" class="designation-text"></span>
+            </div>
+
+            <div class="field-group">
+                <label>📦 Quantité</label>
+                <input type="number" id="quantite" step="1" value="1" placeholder="ex: 2">
+            </div>
+
+            <div class="field-group">
+                <label>💰 Prix (Ar)</label>
+                <input type="number" id="prix" step="100" placeholder="Ariary">
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button id="addBtn" class="btn-ajouter" disabled>➕ Ajouter (Base)</button>
+            <button id="nonBaseBtn" class="btn-nonbase">⚠️ Non base</button>
+            <button id="exportBtn" class="btn-exporter">📎 Exporter Excel</button>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 0.8rem;">
+        <div class="table-wrapper">
+            <table id="dataTable">
+                <thead>
+                    <tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (date)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="8">Chargement de la base...</td></tr>
+                </tbody>
+                <tfoot id="tableFooter"></tfoot>
+             </table>
+        </div>
+    </div>
+    <footer>✅ Lignes rouges = hors base • "Non base" ajoute avec règle 8 caractères</footer>
+</div>
+
+<script>
+    const SPREADSHEET_ID = "1W_712YFKiP08xKEkq7bMr6ca_-BjAEvgtzj5i4o3grk";
+    const API_KEY = "AIzaSyB58x0VHQ3uD397iqlBrc1Jeo8tsKzFvxI";
+    const SHEET_NAME = "produits";
+
+    let produitsDB = [];
+    let lignes = [];
+    let dernierProduitValide = null;
+
+    // DOM elements
+    const codeInput = document.getElementById('codeInput');
+    const dlvInput = document.getElementById('dlv');
+    const designationText = document.getElementById('designationText');
+    const quantiteInput = document.getElementById('quantite');
+    const prixInput = document.getElementById('prix');
+    const addBtn = document.getElementById('addBtn');
+    const nonBaseBtn = document.getElementById('nonBaseBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const tableBody = document.getElementById('tableBody');
+    const tableFooter = document.getElementById('tableFooter');
+
+    function normaliserCode(code) {
+        if (!code) return "";
+        return code.toString().replace(/[\s\.\-]/g, '');
+    }
+
+    function formaterDateFr(dateStr) {
+        if (!dateStr) return "";
+        const [annee, mois, jour] = dateStr.split('-');
+        if (!annee || !mois || !jour) return dateStr;
+        return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
+    }
+
+    async function chargerProduits() {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const rows = data.values;
+            if (!rows || rows.length < 2) throw new Error("Feuille vide");
+
+            const headers = rows[0].map(cell => cell.toString().trim().toLowerCase());
+            const idxBarre = headers.findIndex(h => h.includes("code barre") || h === "codebarre");
+            const idxArticle = headers.findIndex(h => h.includes("code article") || h === "codearticle");
+            const idxDesig = headers.findIndex(h => h.includes("désignation") || h.includes("designation"));
+
+            if (idxBarre === -1 || idxArticle === -1) {
+                produitsDB = rows.slice(1).map(row => ({
+                    codeBarre: row[0] || "",
+                    codeArticle: row[1] || "",
+                    designation: row[2] || ""
+                }));
+            } else {
+                produitsDB = rows.slice(1).map(row => ({
+                    codeBarre: row[idxBarre] || "",
+                    codeArticle: row[idxArticle] || "",
+                    designation: (idxDesig !== -1 && row[idxDesig]) ? row[idxDesig] : ""
+                }));
+            }
+            produitsDB = produitsDB.filter(p => p.codeBarre || p.codeArticle);
+            console.log(`✅ ${produitsDB.length} produits chargés`);
+            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
+        } catch (err) {
+            console.error(err);
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">❌ Erreur : ${err.message}<br>Vérifiez l'onglet "${SHEET_NAME}" et le partage public.</td></tr>`;
+        }
+    }
+
+    function rechercherProduit(identifiant) {
+        if (!identifiant.trim()) return null;
+        const idClean = identifiant.trim();
+        const idNormalise = normaliserCode(idClean);
+        return produitsDB.find(p => {
+            const barreNorm = normaliserCode(p.codeBarre);
+            const articleNorm = normaliserCode(p.codeArticle);
+            return barreNorm === idNormalise || articleNorm === idNormalise;
+        });
+    }
+
+    function mettreAJourDesignation() {
+        const code = codeInput.value.trim();
+        if (code === "") {
+            designationText.textContent = "";
+            dernierProduitValide = null;
+            addBtn.disabled = true;
+            codeInput.classList.remove("valid", "invalid");
+            return;
+        }
+        const produit = rechercherProduit(code);
+        if (produit) {
+            designationText.textContent = produit.designation || "✅ Produit trouvé";
+            dernierProduitValide = produit;
+            addBtn.disabled = false;
+            codeInput.classList.add("valid");
+            codeInput.classList.remove("invalid");
+        } else {
+            designationText.textContent = "❌ Non trouvé";
+            dernierProduitValide = null;
+            addBtn.disabled = true;
+            codeInput.classList.remove("valid");
+            codeInput.classList.add("invalid");
+        }
+    }
+
+    function resetTousLesChamps() {
+        codeInput.value = "";
+        dlvInput.value = "";
+        quantiteInput.value = "1";
+        prixInput.value = "";
+        designationText.textContent = "";
+        dernierProduitValide = null;
+        addBtn.disabled = true;
+        codeInput.classList.remove("valid", "invalid");
+    }
+
+    function ajouterDepuisBase() {
+        if (!dernierProduitValide) {
+            alert("Code invalide pour la base. Utilisez 'Non base'.");
+            return;
+        }
+        const dlv = dlvInput.value;
+        let quantite = parseFloat(quantiteInput.value);
+        if (isNaN(quantite) || quantite <= 0) quantite = 1;
+        let prix = parseFloat(prixInput.value);
+        if (isNaN(prix) || prix < 0) prix = 0;
+
+        lignes.push({
+            codeBarre: dernierProduitValide.codeBarre,
+            codeArticle: dernierProduitValide.codeArticle,
+            designation: dernierProduitValide.designation || "",
+            dlv: dlv,
+            quantite: quantite,
+            prix: prix,
+            horsBase: false
+        });
+        renderTable();
+        resetTousLesChamps();
+    }
+
+    function ajouterHorsBase() {
+        let codeSaisi = codeInput.value.trim();
+        if (codeSaisi === "") {
+            alert("Veuillez saisir un code pour l'ajout hors base.");
+            return;
+        }
+        const dlv = dlvInput.value;
+        let quantite = parseFloat(quantiteInput.value);
+        if (isNaN(quantite) || quantite <= 0) quantite = 1;
+        let prix = parseFloat(prixInput.value);
+        if (isNaN(prix) || prix < 0) prix = 0;
+
+        let codeBarreFinal = "", codeArticleFinal = "";
+        if (codeSaisi.length === 8) {
+            codeArticleFinal = codeSaisi;
+        } else {
+            codeBarreFinal = codeSaisi;
+        }
+
+        lignes.push({
+            codeBarre: codeBarreFinal,
+            codeArticle: codeArticleFinal,
+            designation: "⚠️ HORS BASE",
+            dlv: dlv,
+            quantite: quantite,
+            prix: prix,
+            horsBase: true
+        });
+        renderTable();
+        resetTousLesChamps();
+    }
+
+    function supprimerLigne(index) {
+        lignes.splice(index, 1);
+        renderTable();
+    }
+
+    function renderTable() {
+        if (lignes.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée.</td></tr>';
+            tableFooter.innerHTML = "";
+            return;
+        }
+        let html = "";
+        let totalGeneral = 0;
+        lignes.forEach((l, idx) => {
+            const totalLigne = l.quantite * l.prix;
+            totalGeneral += totalLigne;
+            const rowClass = l.horsBase ? 'class="ligne-hors-base"' : '';
+            const dateFormatee = formaterDateFr(l.dlv);
+            html += `<tr ${rowClass}>
+                <td>${escapeHtml(l.codeBarre) || "—"}</td>
+                <td>${escapeHtml(l.codeArticle) || "—"}</td>
+                <td>${escapeHtml(l.designation)}</td>
+                <td>${escapeHtml(dateFormatee)}</td>
+                <td>${l.quantite}</td>
+                <td>${l.prix.toFixed(0)} Ar</td>
+                <td>${totalLigne.toFixed(0)} Ar</td>
+                <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
+            </tr>`;
+        });
+        tableBody.innerHTML = html;
+        tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(btn.getAttribute('data-index'), 10);
+                supprimerLigne(index);
+            });
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+    }
+
+    function exporterExcel() {
+        if (lignes.length === 0) {
+            alert("Aucune donnée à exporter.");
+            return;
+        }
+        const feuilleData = [["Code barre", "Code article", "Désignation", "Dlv (date)", "Quantité", "Prix unitaire (Ar)", "Total (Ar)"]];
+        lignes.forEach(l => {
+            const dateFormatee = formaterDateFr(l.dlv);
+            feuilleData.push([l.codeBarre, l.codeArticle, l.designation, dateFormatee, l.quantite, l.prix, (l.quantite * l.prix).toFixed(0)]);
+        });
+        const total = lignes.reduce((s, l) => s + (l.quantite * l.prix), 0);
+        feuilleData.push(["", "", "", "", "TOTAL", total.toFixed(0) + " Ar", ""]);
+        const ws = XLSX.utils.aoa_to_sheet(feuilleData);
+        ws['!cols'] = [{wch:16},{wch:16},{wch:28},{wch:14},{wch:6},{wch:12},{wch:12}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Export_Stock");
+        XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+    }
+
+    codeInput.addEventListener('input', mettreAJourDesignation);
+    codeInput.addEventListener('blur', mettreAJourDesignation);
+    addBtn.onclick = ajouterDepuisBase;
+    nonBaseBtn.onclick = ajouterHorsBase;
+    exportBtn.onclick = exporterExcel;
+
+    chargerProduits();
+</script>
+</body>
+</html>
