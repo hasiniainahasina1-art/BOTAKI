@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des commandes – Export XLSX sans PCB</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #1e293b;
+        }
+        .upload-area, .export-area {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .filter-area {
+            margin: 20px 0;
+        }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+        }
+        #fournisseurInput {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #0f172a;
+            color: white;
+            padding: 12px;
+            text-align: center;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .clickable-row {
+            cursor: pointer;
+        }
+        .clickable-row:hover td {
+            background: #fef9c3;
+        }
+        .info, .success {
+            background: #dbeafe;
+            padding: 12px;
+            border-radius: 16px;
+            margin: 16px 0;
+            text-align: center;
+        }
+        .error {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 28px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+        }
+        .modal-content button {
+            padding: 8px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-add {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-cancel {
+            background: #e2e8f0;
+        }
+        .commandes-table {
+            margin-top: 30px;
+        }
+        .action-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin: 0 3px;
+        }
+        .delete-btn {
+            background: #ef4444;
+        }
+        .edit-btn {
+            background: #f59e0b;
+        }
+        .duplicate-row {
+            background-color: #fee2e2 !important;
+        }
+        .export-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        footer {
+            margin-top: 24px;
+            font-size: 0.75rem;
+            text-align: center;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📦 Gestion des commandes – Export XLSX (sans PCB)</h1>
+    <div class="upload-area">
+        <label>📂 1. Chargez votre fichier Excel (base de données)</label><br>
+        <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
+        <p style="font-size:0.8rem;">Colonnes : Code Barr (A), Code Article (B), Désignation (C), PCB (D), Fournisseur (E)<br>✔️ Gère les cellules fusionnées.</p>
+    </div>
+    <div id="message"></div>
+
+    <div class="filter-area" id="filterArea" style="display: none;">
+        <label>🏷️ 2. Tapez un fournisseur :</label>
+        <input type="text" id="fournisseurInput" placeholder="Ex: DUPONT" autocomplete="off">
+    </div>
+
+    <div class="table-wrapper" id="tableContainer" style="display: none;">
+        <table id="resultTable">
+            <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>PCB</th><th>Fournisseur</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="5">Aucune donnée</td></tr></tbody>
+        </table>
+        <p style="font-size:0.8rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander cet article.</p>
+    </div>
+
+    <!-- Modal de commande (avec PCB) -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <h3>🛒 Votre commande avec le PCB d'article</h3>
+            <p id="modalArticleInfo">Article : </p>
+            <p id="modalPCB" style="font-weight:bold;">PCB : </p>
+            <input type="number" id="commandeQty" placeholder="Quantité commandée" min="1" step="1">
+            <div>
+                <button id="confirmOrderBtn" class="btn-add">Ajouter / Modifier</button>
+                <button id="cancelOrderBtn" class="btn-cancel">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+        <h2>📋 Vos commandes</h2>
+        <button id="exportExcelBtn" class="export-btn">📎 Exporter en XLSX (sans PCB)</button>
+    </div>
+    <div class="table-wrapper commandes-table">
+        <table id="cartTable">
+            <thead><tr><th>Code Article</th><th>Désignation</th><th>PCB</th><th>Commande</th><th>Fournisseur</th><th>Actions</th></tr></thead>
+            <tbody id="cartBody"><tr><td colspan="6">Aucune commande ajoutée</td></tr></tbody>
+        </table>
+    </div>
+    <footer>⚡ Les commandes restent dans votre session. Doublons en rouge. L'export Excel ne contient pas la colonne PCB (conforme à votre demande).</footer>
+</div>
+
+<script>
+    // ---------- Données ----------
+    let allRows = [];
+    let orders = [];
+    let editIndex = null;
+
+    // DOM elements
+    const fileInput = document.getElementById('excelFile');
+    const messageDiv = document.getElementById('message');
+    const filterArea = document.getElementById('filterArea');
+    const tableContainer = document.getElementById('tableContainer');
+    const fournisseurInput = document.getElementById('fournisseurInput');
+    const tableBody = document.getElementById('tableBody');
+    const cartBody = document.getElementById('cartBody');
+    const modal = document.getElementById('orderModal');
+    const modalArticleInfo = document.getElementById('modalArticleInfo');
+    const modalPCB = document.getElementById('modalPCB');
+    const commandeQty = document.getElementById('commandeQty');
+    const confirmOrderBtn = document.getElementById('confirmOrderBtn');
+    const cancelOrderBtn = document.getElementById('cancelOrderBtn');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+
+    let currentSelectedArticle = null;
+
+    function showMessage(msg, isError = false) {
+        messageDiv.innerHTML = `<div class="${isError ? 'error' : 'info'}">${msg}</div>`;
+        if (!isError) setTimeout(() => { if (messageDiv.innerHTML.includes(msg)) messageDiv.innerHTML = ''; }, 4000);
+    }
+
+    // Charger Excel et propager les fournisseurs
+    function loadExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let data = e.target.result;
+                let workbook;
+                if (file.name.endsWith('.csv')) workbook = XLSX.read(data, { type: 'binary' });
+                else workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
+
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+                if (!rows || rows.length < 2) throw new Error("Fichier vide ou mal formaté");
+
+                const rawDataRows = rows.slice(1);
+                let lastSupplier = "";
+                const enriched = [];
+                for (let row of rawDataRows) {
+                    const codeBarre = (row[0] != null) ? String(row[0]) : "";
+                    const codeArticle = (row[1] != null) ? String(row[1]) : "";
+                    const designation = (row[2] != null) ? String(row[2]) : "";
+                    const pcb = (row[3] != null) ? String(row[3]) : "";
+                    let fournisseur = (row[4] != null) ? String(row[4]).trim() : "";
+                    if (fournisseur === "") fournisseur = lastSupplier;
+                    else lastSupplier = fournisseur;
+
+                    if (codeBarre !== "" || codeArticle !== "" || designation !== "") {
+                        enriched.push({ codeBarre, codeArticle, designation, pcb, fournisseur });
+                    }
+                }
+                allRows = enriched;
+                if (allRows.length === 0) throw new Error("Aucune donnée exploitable");
+                showMessage(`✅ ${allRows.length} articles chargés.`, false);
+                filterArea.style.display = 'block';
+                tableContainer.style.display = 'block';
+                filterTable();
+            } catch (err) {
+                showMessage(err.message, true);
+            }
+        };
+        if (file.name.endsWith('.csv')) reader.readAsBinaryString(file);
+        else reader.readAsArrayBuffer(file);
+    }
+
+    function filterTable() {
+        const term = fournisseurInput.value.trim().toLowerCase();
+        let filtered = term === "" ? allRows : allRows.filter(r => r.fournisseur.toLowerCase().includes(term));
+        if (filtered.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5">Aucun article pour ce fournisseur</td></tr>';
+            return;
+        }
+        tableBody.innerHTML = '';
+        filtered.forEach(article => {
+            const tr = document.createElement('tr');
+            tr.classList.add('clickable-row');
+            tr.addEventListener('click', () => openOrderModal(article, null));
+            tr.appendChild(createCell(article.codeBarre));
+            tr.appendChild(createCell(article.codeArticle));
+            tr.appendChild(createCell(article.designation));
+            tr.appendChild(createCell(article.pcb));
+            tr.appendChild(createCell(article.fournisseur));
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function createCell(content) {
+        const td = document.createElement('td');
+        td.textContent = content || "-";
+        return td;
+    }
+
+    function openOrderModal(article, editIdx) {
+        currentSelectedArticle = article;
+        editIndex = editIdx;
+        modalArticleInfo.innerText = `📦 ${article.codeArticle} - ${article.designation}`;
+        modalPCB.innerText = `PCB : ${article.pcb || "-"}`;
+        if (editIndex !== null && orders[editIndex]) {
+            commandeQty.value = orders[editIndex].commande;
+            confirmOrderBtn.textContent = "Modifier";
+        } else {
+            commandeQty.value = "1";
+            confirmOrderBtn.textContent = "Ajouter";
+        }
+        modal.style.display = "flex";
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+        currentSelectedArticle = null;
+        editIndex = null;
+    }
+
+    function saveOrder() {
+        if (!currentSelectedArticle) return;
+        const qty = parseInt(commandeQty.value);
+        if (isNaN(qty) || qty <= 0) {
+            showMessage("Quantité invalide", true);
+            return;
+        }
+        const newOrder = {
+            codeArticle: currentSelectedArticle.codeArticle,
+            designation: currentSelectedArticle.designation,
+            pcb: currentSelectedArticle.pcb,
+            commande: qty,
+            fournisseur: currentSelectedArticle.fournisseur
+        };
+        if (editIndex !== null) {
+            orders[editIndex] = newOrder;
+            showMessage(`Commande modifiée`, false);
+        } else {
+            orders.push(newOrder);
+            showMessage(`Commande ajoutée`, false);
+        }
+        renderCart();
+        closeModal();
+    }
+
+    function removeOrder(index) {
+        orders.splice(index, 1);
+        renderCart();
+    }
+
+    function editOrder(index) {
+        const order = orders[index];
+        const article = allRows.find(a => a.codeArticle === order.codeArticle && a.fournisseur === order.fournisseur);
+        if (article) openOrderModal(article, index);
+        else {
+            const fakeArticle = { codeArticle: order.codeArticle, designation: order.designation, pcb: order.pcb, fournisseur: order.fournisseur, codeBarre: "" };
+            openOrderModal(fakeArticle, index);
+        }
+    }
+
+    function renderCart() {
+        if (orders.length === 0) {
+            cartBody.innerHTML = '<tr><td colspan="6">Aucune commande ajoutée</td></tr>';
+            return;
+        }
+        const countMap = new Map();
+        orders.forEach(order => {
+            const key = `${order.codeArticle}|${order.fournisseur}`;
+            countMap.set(key, (countMap.get(key) || 0) + 1);
+        });
+        cartBody.innerHTML = '';
+        orders.forEach((order, idx) => {
+            const tr = document.createElement('tr');
+            const key = `${order.codeArticle}|${order.fournisseur}`;
+            if (countMap.get(key) > 1) tr.classList.add('duplicate-row');
+            tr.appendChild(createCell(order.codeArticle));
+            tr.appendChild(createCell(order.designation));
+            tr.appendChild(createCell(order.pcb));
+            tr.appendChild(createCell(order.commande));
+            tr.appendChild(createCell(order.fournisseur));
+            const tdAction = document.createElement('td');
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Modifier';
+            editBtn.className = 'action-btn edit-btn';
+            editBtn.onclick = (e) => { e.stopPropagation(); editOrder(idx); };
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Supprimer';
+            delBtn.className = 'action-btn delete-btn';
+            delBtn.onclick = (e) => { e.stopPropagation(); removeOrder(idx); };
+            tdAction.appendChild(editBtn);
+            tdAction.appendChild(delBtn);
+            tr.appendChild(tdAction);
+            cartBody.appendChild(tr);
+        });
+    }
+
+    // Export XLSX sans la colonne PCB (conforme à la demande)
+    async function exportToExcel() {
+        if (orders.length === 0) {
+            showMessage("Aucune commande à exporter", true);
+            return;
+        }
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Commandes');
+        
+        // Définir les colonnes : on retire PCB
+        worksheet.columns = [
+            { header: 'Code Article', key: 'codeArticle', width: 20 },
+            { header: 'Désignation', key: 'designation', width: 30 },
+            { header: 'Commande', key: 'commande', width: 12 },
+            { header: 'Fournisseur', key: 'fournisseur', width: 20 }
+        ];
+        
+        // Style des en-têtes : gras + centré
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell) => {
+            cell.font = { bold: true };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
+        
+        // Ajout des données (sans PCB)
+        orders.forEach(order => {
+            worksheet.addRow({
+                codeArticle: order.codeArticle,
+                designation: order.designation,
+                commande: order.commande,
+                fournisseur: order.fournisseur
+            });
+        });
+        
+        // Centrer toutes les cellules de données
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber > 1) {
+                row.eachCell(cell => {
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                });
+            }
+        });
+        
+        // Générer et télécharger
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `commandes_sans_pcb_${new Date().toISOString().slice(0,19)}.xlsx`);
+        showMessage("Export XLSX généré (sans la colonne PCB, en-têtes gras et centrage).", false);
+    }
+
+    // Événements
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) loadExcel(file);
+        else { filterArea.style.display = 'none'; tableContainer.style.display = 'none'; allRows = []; orders = []; renderCart(); }
+    });
+    fournisseurInput.addEventListener('input', filterTable);
+    confirmOrderBtn.addEventListener('click', saveOrder);
+    cancelOrderBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    exportExcelBtn.addEventListener('click', exportToExcel);
+
+    showMessage("📎 Chargez votre Excel. Le champ flottant affiche le PCB, mais l'export Excel ne contient PAS la colonne PCB.", false);
+</script>
+</body>
+</html>
