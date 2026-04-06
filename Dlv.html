@@ -6,6 +6,7 @@
     <title>Smart Inventory - Gestionnaire codes</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
+        /* === STYLES IDENTIQUES À VOTRE VERSION (rien ne change) === */
         * {
             margin: 0;
             padding: 0;
@@ -47,7 +48,6 @@
             gap: 0.2rem;
         }
 
-        /* Ligne Dlv + désignation : côte à côte */
         .row-dlv {
             display: flex;
             flex-wrap: nowrap;
@@ -285,16 +285,17 @@
                     <tr><td colspan="8">Chargement de la base...</td></tr>
                 </tbody>
                 <tfoot id="tableFooter"></tfoot>
-             </table>
+            </table>
         </div>
     </div>
     <footer>✅ Lignes rouges = hors base • "Non base" ajoute avec règle 8 caractères</footer>
 </div>
 
 <script>
-    const SPREADSHEET_ID = "1W_712YFKiP08xKEkq7bMr6ca_-BjAEvgtzj5i4o3grk";
-    const API_KEY = "AIzaSyB58x0VHQ3uD397iqlBrc1Jeo8tsKzFvxI";
-    const SHEET_NAME = "produits";
+    // ========== CONFIGURATION ==========
+    // Chemin vers le fichier JSON contenant votre base de produits
+    // Placez ce fichier à la racine de votre site (ex: https://botaki.vercel.app/produits.json)
+    const PRODUITS_JSON_URL = "produits.json";   // Vous pouvez aussi mettre une URL absolue
 
     let produitsDB = [];
     let lignes = [];
@@ -312,6 +313,7 @@
     const tableBody = document.getElementById('tableBody');
     const tableFooter = document.getElementById('tableFooter');
 
+    // Utilitaires
     function normaliserCode(code) {
         if (!code) return "";
         return code.toString().replace(/[\s\.\-]/g, '');
@@ -324,39 +326,24 @@
         return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
     }
 
+    // Chargement de la base depuis le fichier JSON (GitHub / serveur)
     async function chargerProduits() {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
         try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            const rows = data.values;
-            if (!rows || rows.length < 2) throw new Error("Feuille vide");
-
-            const headers = rows[0].map(cell => cell.toString().trim().toLowerCase());
-            const idxBarre = headers.findIndex(h => h.includes("code barre") || h === "codebarre");
-            const idxArticle = headers.findIndex(h => h.includes("code article") || h === "codearticle");
-            const idxDesig = headers.findIndex(h => h.includes("désignation") || h.includes("designation"));
-
-            if (idxBarre === -1 || idxArticle === -1) {
-                produitsDB = rows.slice(1).map(row => ({
-                    codeBarre: row[0] || "",
-                    codeArticle: row[1] || "",
-                    designation: row[2] || ""
-                }));
-            } else {
-                produitsDB = rows.slice(1).map(row => ({
-                    codeBarre: row[idxBarre] || "",
-                    codeArticle: row[idxArticle] || "",
-                    designation: (idxDesig !== -1 && row[idxDesig]) ? row[idxDesig] : ""
-                }));
-            }
-            produitsDB = produitsDB.filter(p => p.codeBarre || p.codeArticle);
-            console.log(`✅ ${produitsDB.length} produits chargés`);
+            const response = await fetch(PRODUITS_JSON_URL);
+            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier non trouvé`);
+            const produits = await response.json();
+            // Le fichier doit être un tableau d'objets avec au moins : codeBarre, codeArticle, designation
+            if (!Array.isArray(produits)) throw new Error("Format JSON invalide : attend un tableau");
+            produitsDB = produits.map(p => ({
+                codeBarre: p.codeBarre || "",
+                codeArticle: p.codeArticle || "",
+                designation: p.designation || ""
+            })).filter(p => p.codeBarre || p.codeArticle);
+            console.log(`✅ ${produitsDB.length} produits chargés depuis ${PRODUITS_JSON_URL}`);
             tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
         } catch (err) {
             console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">❌ Erreur : ${err.message}<br>Vérifiez l'onglet "${SHEET_NAME}" et le partage public.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">❌ Erreur : ${err.message}<br>Assurez-vous que le fichier "${PRODUITS_JSON_URL}" existe et est accessible.</td></tr>`;
         }
     }
 
@@ -490,7 +477,7 @@
                 <td>${l.prix.toFixed(0)} Ar</td>
                 <td>${totalLigne.toFixed(0)} Ar</td>
                 <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-            </tr>`;
+             </tr>`;
         });
         tableBody.innerHTML = html;
         tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
@@ -526,12 +513,14 @@
         XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
     }
 
+    // Événements
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
     nonBaseBtn.onclick = ajouterHorsBase;
     exportBtn.onclick = exporterExcel;
 
+    // Lancement
     chargerProduits();
 </script>
 </body>
