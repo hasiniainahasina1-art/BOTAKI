@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Base GitHub)</title>
-    <!-- SheetJS pour lire les fichiers Excel -->
+    <title>BOTAKI - Dlv & Prix (Base Excel GitHub)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         * {
@@ -238,6 +237,16 @@
             color: #0b3b5f;
             text-align: center;
         }
+        .refresh-btn {
+            background: #2d4593;
+            color: white;
+            border: none;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+        }
 
         @media (max-width: 550px) {
             .row-dlv {
@@ -253,8 +262,10 @@
 <body>
 <div class="container">
     <div class="card">
-        <!-- Indicateur de chargement / statut -->
-        <div id="statusBar" class="status-bar">⏳ Chargement de la base de données GitHub...</div>
+        <div id="statusBar" class="status-bar">
+            ⏳ Initialisation...
+            <button id="refreshBaseBtn" class="refresh-btn">⟳ Recharger</button>
+        </div>
 
         <div class="form-vertical">
             <div class="field-group">
@@ -305,14 +316,15 @@
 </div>
 
 <script>
-    // ================= CONFIGURATION =================
-    // URL brute du fichier Excel sur GitHub (à adapter si besoin)
+    // ========== CONFIGURATION ==========
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/Base-de-donn-es-D-lv/main/database.xlsx';
-    // Nom de la feuille Excel à lire (laissez vide pour prendre la première feuille)
-    const SHEET_NAME = '';  // si vide, prend la première feuille
-    // =================================================
+    // Structure fixe : colonne 0 = Code barre, colonne 1 = Code article, colonne 2 = Désignation
+    const COL_CODE_BARRE = 0;
+    const COL_CODE_ARTICLE = 1;
+    const COL_DESIGNATION = 2;
+    // ====================================
 
-    let produitsDB = [];        // Liste des produits {codeBarre, codeArticle, designation}
+    let produitsDB = [];        // Liste des produits
     let lignes = [];            // Lignes ajoutées dans le tableau
     let dernierProduitValide = null;
     let baseChargee = false;
@@ -329,6 +341,7 @@
     const tableBody = document.getElementById('tableBody');
     const tableFooter = document.getElementById('tableFooter');
     const statusBar = document.getElementById('statusBar');
+    const refreshBaseBtn = document.getElementById('refreshBaseBtn');
 
     // Fonctions utilitaires
     function normaliserCode(code) {
@@ -348,77 +361,78 @@
         return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
     }
 
-    // Charger le fichier Excel depuis GitHub et extraire les produits
+    // Charger le fichier Excel depuis GitHub
     async function chargerProduitsDepuisGitHub() {
-        statusBar.innerHTML = "⏳ Téléchargement du fichier Excel depuis GitHub...";
+        statusBar.innerHTML = "⏳ Téléchargement du fichier Excel depuis GitHub... <button id='refreshBaseBtn' class='refresh-btn'>⟳ Recharger</button>";
+        // Réattacher l'événement après modification du innerHTML
+        const newRefreshBtn = document.getElementById('refreshBaseBtn');
+        if (newRefreshBtn) newRefreshBtn.onclick = () => chargerProduitsDepuisGitHub();
+
         try {
-            const response = await fetch(EXCEL_URL, { cache: 'no-store' });
-            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier introuvable ou inaccessible`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes max
+            const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier introuvable`);
+
             const arrayBuffer = await response.arrayBuffer();
-            
-            // Lire le fichier Excel avec SheetJS
+            statusBar.innerHTML = "📊 Lecture du fichier Excel... <button id='refreshBaseBtn' class='refresh-btn'>⟳ Recharger</button>";
+            if (newRefreshBtn) document.getElementById('refreshBaseBtn').onclick = () => chargerProduitsDepuisGitHub();
+
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            let sheet;
-            if (SHEET_NAME && workbook.Sheets[SHEET_NAME]) {
-                sheet = workbook.Sheets[SHEET_NAME];
-            } else {
-                // Prendre la première feuille
-                const firstSheetName = workbook.SheetNames[0];
-                sheet = workbook.Sheets[firstSheetName];
-                statusBar.innerHTML = `📄 Utilisation de la feuille : ${firstSheetName}`;
-            }
-            
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
             const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Le fichier Excel ne contient pas assez de lignes");
-            
-            // Détection automatique des colonnes : on suppose que la première ligne est l'en-tête
-            const headers = rows[0].map(cell => (cell || "").toString().trim().toLowerCase());
-            const idxBarre = headers.findIndex(h => h.includes("code barre") || h === "codebarre" || h.includes("ean"));
-            const idxArticle = headers.findIndex(h => h.includes("code article") || h === "codearticle" || h.includes("ref"));
-            const idxDesig = headers.findIndex(h => h.includes("désignation") || h.includes("designation") || h.includes("produit") || h.includes("nom"));
-            
-            // Fallback : si aucune colonne reconnue, on prend les 3 premières colonnes (barre, article, désignation)
-            let produits = [];
-            for (let i = 1; i < rows.length; i++) {
+
+            if (!rows || rows.length < 2) throw new Error("Le fichier Excel est vide");
+
+            // On ignore la première ligne si elle contient des en-têtes (optionnel)
+            let startRow = 0;
+            // Détection simple : si la première ligne contient "code" ou "barre" etc., on saute
+            const firstRow = rows[0];
+            if (firstRow && firstRow.length > 0) {
+                const firstCell = (firstRow[0] || "").toString().toLowerCase();
+                if (firstCell.includes("code") || firstCell.includes("barre") || firstCell.includes("ean")) {
+                    startRow = 1;
+                }
+            }
+
+            const produits = [];
+            for (let i = startRow; i < rows.length; i++) {
                 const row = rows[i];
                 if (!row || row.length === 0) continue;
-                let codeBarre = "", codeArticle = "", designation = "";
-                if (idxBarre !== -1 && row[idxBarre]) codeBarre = row[idxBarre].toString();
-                if (idxArticle !== -1 && row[idxArticle]) codeArticle = row[idxArticle].toString();
-                if (idxDesig !== -1 && row[idxDesig]) designation = row[idxDesig].toString();
-                // Fallback si indices non trouvés : colonne0, colonne1, colonne2
-                if (idxBarre === -1 && idxArticle === -1) {
-                    codeBarre = row[0] ? row[0].toString() : "";
-                    codeArticle = row[1] ? row[1].toString() : "";
-                    designation = row[2] ? row[2].toString() : "";
-                } else if (idxDesig === -1) {
-                    designation = `Produit ${codeBarre || codeArticle}`;
-                }
+                const codeBarre = (row[COL_CODE_BARRE] !== undefined && row[COL_CODE_BARRE] !== null) ? row[COL_CODE_BARRE].toString().trim() : "";
+                const codeArticle = (row[COL_CODE_ARTICLE] !== undefined && row[COL_CODE_ARTICLE] !== null) ? row[COL_CODE_ARTICLE].toString().trim() : "";
+                let designation = (row[COL_DESIGNATION] !== undefined && row[COL_DESIGNATION] !== null) ? row[COL_DESIGNATION].toString().trim() : "";
+                if (!designation && (codeBarre || codeArticle)) designation = `Produit ${codeBarre || codeArticle}`;
                 if (codeBarre || codeArticle) {
                     produits.push({ codeBarre, codeArticle, designation });
                 }
             }
-            
+
             produitsDB = produits;
             baseChargee = true;
-            statusBar.innerHTML = `✅ Base chargée : ${produitsDB.length} produits depuis GitHub (${new Date().toLocaleTimeString()})`;
-            console.log("Produits chargés :", produitsDB.slice(0, 5));
-            
-            // Réinitialiser l'affichage du tableau (aucune ligne pour l'instant)
+            statusBar.innerHTML = `✅ Base chargée : ${produitsDB.length} produits (${new Date().toLocaleTimeString()}) <button id='refreshBaseBtn' class='refresh-btn'>⟳ Recharger</button>`;
+            document.getElementById('refreshBaseBtn').onclick = () => chargerProduitsDepuisGitHub();
+
+            // Réinitialiser l'affichage du tableau principal
             if (lignes.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             } else {
-                renderTable(); // re-render si déjà des lignes (cas rare)
+                renderTable();
             }
+            console.log("Exemple produit :", produitsDB[0]);
         } catch (err) {
             console.error(err);
-            statusBar.innerHTML = `❌ Erreur de chargement : ${err.message}. Vérifiez l'URL et l'accès public.`;
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Impossible de charger la base de données. Vérifiez le fichier Excel sur GitHub.</td></tr>`;
+            statusBar.innerHTML = `❌ Erreur : ${err.message}. Vérifiez l'URL et la console. <button id='refreshBaseBtn' class='refresh-btn'>⟳ Réessayer</button>`;
+            const refreshBtn = document.getElementById('refreshBaseBtn');
+            if (refreshBtn) refreshBtn.onclick = () => chargerProduitsDepuisGitHub();
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Échec chargement : ${err.message}</td></tr>`;
             baseChargee = false;
         }
     }
 
-    // Rechercher un produit dans la base (par code barre ou code article)
+    // Rechercher un produit dans la base (normalisation)
     function rechercherProduit(identifiant) {
         if (!identifiant.trim() || !baseChargee) return null;
         const idClean = identifiant.trim();
@@ -430,7 +444,7 @@
         });
     }
 
-    // Mise à jour de l'affichage de la désignation et activation du bouton "Ajouter (Base)"
+    // Mise à jour de la désignation et activation du bouton "Ajouter (Base)"
     function mettreAJourDesignation() {
         const code = codeInput.value.trim();
         if (code === "") {
@@ -472,7 +486,6 @@
         codeInput.classList.remove("valid", "invalid");
     }
 
-    // Ajout d'une ligne depuis la base (produit existant)
     function ajouterDepuisBase() {
         if (!dernierProduitValide) {
             alert("Code invalide ou non trouvé dans la base.");
@@ -497,7 +510,6 @@
         resetTousLesChamps();
     }
 
-    // Ajout hors base (code non présent dans l'Excel)
     function ajouterHorsBase() {
         let codeSaisi = codeInput.value.trim();
         if (codeSaisi === "") {
@@ -511,7 +523,6 @@
         if (isNaN(prix) || prix < 0) prix = 0;
 
         let codeBarreFinal = "", codeArticleFinal = "";
-        // Règle : si exactement 8 caractères → code article, sinon code barre
         if (codeSaisi.length === 8) {
             codeArticleFinal = codeSaisi;
         } else {
@@ -558,12 +569,9 @@
                 <td>${l.prix.toFixed(0)} Ar</td>
                 <td>${totalLigne.toFixed(0)} Ar</td>
                 <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-            </tr>`;
+             </tr>`;
         });
         tableBody.innerHTML = html;
         tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
-        
-        // Attacher les événements de suppression
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-       
+
+        document.querySelectorAll('.delete-btn').forEach(btn
