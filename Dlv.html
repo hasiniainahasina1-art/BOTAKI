@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Base Excel GitHub)</title>
+    <title>BOTAKI - Dlv & Prix</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -110,12 +110,12 @@
                 <span id="designationText" class="designation-text"></span>
             </div>
             <div class="field-group">
-                <label>📦 Quantité</label>
-                <input type="number" id="quantite" step="1" value="1" placeholder="ex: 2">
+                <label>📦 Quantité (max 6 chiffres)</label>
+                <input type="number" id="quantite" step="1" value="1" min="1" max="999999" maxlength="6" inputmode="numeric" oninput="if(this.value.length>6) this.value=this.value.slice(0,6)">
             </div>
             <div class="field-group">
-                <label>💰 Prix (Ar)</label>
-                <input type="number" id="prix" step="100" placeholder="Ariary">
+                <label>💰 Prix (Ar) (jusqu'à 10 chiffres)</label>
+                <input type="number" id="prix" step="1" value="" placeholder="Ariary" min="0" max="9999999999" inputmode="numeric" oninput="if(this.value.length>10) this.value=this.value.slice(0,10)">
             </div>
         </div>
 
@@ -140,9 +140,7 @@
 
 <script>
     // ================= CONFIGURATION =================
-    // URL CORRECTE (raw.githubusercontent.com)
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
-    // Structure : colonne 0 = Code barre, colonne 1 = Code article, colonne 2 = Désignation
     const COL_CODE_BARRE = 0;
     const COL_CODE_ARTICLE = 1;
     const COL_DESIGNATION = 2;
@@ -195,18 +193,17 @@
         tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement en cours...</td></tr>';
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 secondes max
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
             const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
             setStatus("Lecture du fichier Excel...");
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Le fichier Excel ne contient pas de données");
-            
-            // Déterminer la ligne de début (sauter l'en-tête si présent)
+            if (!rows || rows.length < 2) throw new Error("Le fichier Excel est vide");
+
             let startRow = 0;
             const firstRow = rows[0];
             if (firstRow && firstRow.length > 0) {
@@ -215,7 +212,7 @@
                     startRow = 1;
                 }
             }
-            
+
             const produits = [];
             for (let i = startRow; i < rows.length; i++) {
                 const row = rows[i];
@@ -224,18 +221,14 @@
                 const codeArticle = (row[COL_CODE_ARTICLE] !== undefined && row[COL_CODE_ARTICLE] !== null) ? row[COL_CODE_ARTICLE].toString().trim() : "";
                 let designation = (row[COL_DESIGNATION] !== undefined && row[COL_DESIGNATION] !== null) ? row[COL_DESIGNATION].toString().trim() : "";
                 if (!designation && (codeBarre || codeArticle)) designation = `Produit ${codeBarre || codeArticle}`;
-                if (codeBarre || codeArticle) {
-                    produits.push({ codeBarre, codeArticle, designation });
-                }
+                if (codeBarre || codeArticle) produits.push({ codeBarre, codeArticle, designation });
             }
             produitsDB = produits;
             baseChargee = true;
             setStatus(`Base chargée : ${produitsDB.length} produits (${new Date().toLocaleTimeString()})`);
             if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             else renderTable();
-            console.log("Exemple produit:", produitsDB[0]);
         } catch (err) {
-            console.error(err);
             setStatus(`Erreur : ${err.message}`, true);
             tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Échec chargement : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
             baseChargee = false;
@@ -297,10 +290,12 @@
     function ajouterDepuisBase() {
         if (!dernierProduitValide) { alert("Code invalide ou non trouvé."); return; }
         const dlv = dlvInput.value;
-        let quantite = parseFloat(quantiteInput.value);
+        let quantite = parseInt(quantiteInput.value, 10);
         if (isNaN(quantite) || quantite <= 0) quantite = 1;
+        if (quantite > 999999) quantite = 999999;
         let prix = parseFloat(prixInput.value);
         if (isNaN(prix) || prix < 0) prix = 0;
+        if (prix > 9999999999) prix = 9999999999;
         lignes.push({
             codeBarre: dernierProduitValide.codeBarre,
             codeArticle: dernierProduitValide.codeArticle,
@@ -315,10 +310,12 @@
         let codeSaisi = codeInput.value.trim();
         if (!codeSaisi) { alert("Veuillez saisir un code."); return; }
         const dlv = dlvInput.value;
-        let quantite = parseFloat(quantiteInput.value);
+        let quantite = parseInt(quantiteInput.value, 10);
         if (isNaN(quantite) || quantite <= 0) quantite = 1;
+        if (quantite > 999999) quantite = 999999;
         let prix = parseFloat(prixInput.value);
         if (isNaN(prix) || prix < 0) prix = 0;
+        if (prix > 9999999999) prix = 9999999999;
         let codeBarreFinal = "", codeArticleFinal = "";
         if (codeSaisi.length === 8) codeArticleFinal = codeSaisi;
         else codeBarreFinal = codeSaisi;
