@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Smart Inventory - Gestionnaire codes</title>
+    <title>BOTAKI - Dlv & Prix (Base GitHub)</title>
+    <!-- SheetJS pour lire les fichiers Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        /* === STYLES IDENTIQUES À VOTRE VERSION (rien ne change) === */
         * {
             margin: 0;
             padding: 0;
@@ -229,6 +229,16 @@
             background-color: #fef2f2;
         }
 
+        .status-bar {
+            background: #fef9e6;
+            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            margin-bottom: 0.8rem;
+            font-size: 0.7rem;
+            color: #0b3b5f;
+            text-align: center;
+        }
+
         @media (max-width: 550px) {
             .row-dlv {
                 flex-wrap: wrap;
@@ -243,6 +253,9 @@
 <body>
 <div class="container">
     <div class="card">
+        <!-- Indicateur de chargement / statut -->
+        <div id="statusBar" class="status-bar">⏳ Chargement de la base de données GitHub...</div>
+
         <div class="form-vertical">
             <div class="field-group">
                 <label>🔍 Code barre / article *</label>
@@ -292,16 +305,19 @@
 </div>
 
 <script>
-    // ========== CONFIGURATION ==========
-    // Chemin vers le fichier JSON contenant votre base de produits
-    // Placez ce fichier à la racine de votre site (ex: https://botaki.vercel.app/produits.json)
-    const PRODUITS_JSON_URL = "produits.json";   // Vous pouvez aussi mettre une URL absolue
+    // ================= CONFIGURATION =================
+    // URL brute du fichier Excel sur GitHub (à adapter si besoin)
+    const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/Base-de-donn-es-D-lv/main/database.xlsx';
+    // Nom de la feuille Excel à lire (laissez vide pour prendre la première feuille)
+    const SHEET_NAME = '';  // si vide, prend la première feuille
+    // =================================================
 
-    let produitsDB = [];
-    let lignes = [];
+    let produitsDB = [];        // Liste des produits {codeBarre, codeArticle, designation}
+    let lignes = [];            // Lignes ajoutées dans le tableau
     let dernierProduitValide = null;
+    let baseChargee = false;
 
-    // DOM elements
+    // Éléments DOM
     const codeInput = document.getElementById('codeInput');
     const dlvInput = document.getElementById('dlv');
     const designationText = document.getElementById('designationText');
@@ -312,8 +328,9 @@
     const exportBtn = document.getElementById('exportBtn');
     const tableBody = document.getElementById('tableBody');
     const tableFooter = document.getElementById('tableFooter');
+    const statusBar = document.getElementById('statusBar');
 
-    // Utilitaires
+    // Fonctions utilitaires
     function normaliserCode(code) {
         if (!code) return "";
         return code.toString().replace(/[\s\.\-]/g, '');
@@ -326,29 +343,84 @@
         return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
     }
 
-    // Chargement de la base depuis le fichier JSON (GitHub / serveur)
-    async function chargerProduits() {
+    function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+    }
+
+    // Charger le fichier Excel depuis GitHub et extraire les produits
+    async function chargerProduitsDepuisGitHub() {
+        statusBar.innerHTML = "⏳ Téléchargement du fichier Excel depuis GitHub...";
         try {
-            const response = await fetch(PRODUITS_JSON_URL);
-            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier non trouvé`);
-            const produits = await response.json();
-            // Le fichier doit être un tableau d'objets avec au moins : codeBarre, codeArticle, designation
-            if (!Array.isArray(produits)) throw new Error("Format JSON invalide : attend un tableau");
-            produitsDB = produits.map(p => ({
-                codeBarre: p.codeBarre || "",
-                codeArticle: p.codeArticle || "",
-                designation: p.designation || ""
-            })).filter(p => p.codeBarre || p.codeArticle);
-            console.log(`✅ ${produitsDB.length} produits chargés depuis ${PRODUITS_JSON_URL}`);
-            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
+            const response = await fetch(EXCEL_URL, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier introuvable ou inaccessible`);
+            const arrayBuffer = await response.arrayBuffer();
+            
+            // Lire le fichier Excel avec SheetJS
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            let sheet;
+            if (SHEET_NAME && workbook.Sheets[SHEET_NAME]) {
+                sheet = workbook.Sheets[SHEET_NAME];
+            } else {
+                // Prendre la première feuille
+                const firstSheetName = workbook.SheetNames[0];
+                sheet = workbook.Sheets[firstSheetName];
+                statusBar.innerHTML = `📄 Utilisation de la feuille : ${firstSheetName}`;
+            }
+            
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+            if (!rows || rows.length < 2) throw new Error("Le fichier Excel ne contient pas assez de lignes");
+            
+            // Détection automatique des colonnes : on suppose que la première ligne est l'en-tête
+            const headers = rows[0].map(cell => (cell || "").toString().trim().toLowerCase());
+            const idxBarre = headers.findIndex(h => h.includes("code barre") || h === "codebarre" || h.includes("ean"));
+            const idxArticle = headers.findIndex(h => h.includes("code article") || h === "codearticle" || h.includes("ref"));
+            const idxDesig = headers.findIndex(h => h.includes("désignation") || h.includes("designation") || h.includes("produit") || h.includes("nom"));
+            
+            // Fallback : si aucune colonne reconnue, on prend les 3 premières colonnes (barre, article, désignation)
+            let produits = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+                let codeBarre = "", codeArticle = "", designation = "";
+                if (idxBarre !== -1 && row[idxBarre]) codeBarre = row[idxBarre].toString();
+                if (idxArticle !== -1 && row[idxArticle]) codeArticle = row[idxArticle].toString();
+                if (idxDesig !== -1 && row[idxDesig]) designation = row[idxDesig].toString();
+                // Fallback si indices non trouvés : colonne0, colonne1, colonne2
+                if (idxBarre === -1 && idxArticle === -1) {
+                    codeBarre = row[0] ? row[0].toString() : "";
+                    codeArticle = row[1] ? row[1].toString() : "";
+                    designation = row[2] ? row[2].toString() : "";
+                } else if (idxDesig === -1) {
+                    designation = `Produit ${codeBarre || codeArticle}`;
+                }
+                if (codeBarre || codeArticle) {
+                    produits.push({ codeBarre, codeArticle, designation });
+                }
+            }
+            
+            produitsDB = produits;
+            baseChargee = true;
+            statusBar.innerHTML = `✅ Base chargée : ${produitsDB.length} produits depuis GitHub (${new Date().toLocaleTimeString()})`;
+            console.log("Produits chargés :", produitsDB.slice(0, 5));
+            
+            // Réinitialiser l'affichage du tableau (aucune ligne pour l'instant)
+            if (lignes.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
+            } else {
+                renderTable(); // re-render si déjà des lignes (cas rare)
+            }
         } catch (err) {
             console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">❌ Erreur : ${err.message}<br>Assurez-vous que le fichier "${PRODUITS_JSON_URL}" existe et est accessible.</td></tr>`;
+            statusBar.innerHTML = `❌ Erreur de chargement : ${err.message}. Vérifiez l'URL et l'accès public.`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Impossible de charger la base de données. Vérifiez le fichier Excel sur GitHub.</td></tr>`;
+            baseChargee = false;
         }
     }
 
+    // Rechercher un produit dans la base (par code barre ou code article)
     function rechercherProduit(identifiant) {
-        if (!identifiant.trim()) return null;
+        if (!identifiant.trim() || !baseChargee) return null;
         const idClean = identifiant.trim();
         const idNormalise = normaliserCode(idClean);
         return produitsDB.find(p => {
@@ -358,6 +430,7 @@
         });
     }
 
+    // Mise à jour de l'affichage de la désignation et activation du bouton "Ajouter (Base)"
     function mettreAJourDesignation() {
         const code = codeInput.value.trim();
         if (code === "") {
@@ -365,6 +438,11 @@
             dernierProduitValide = null;
             addBtn.disabled = true;
             codeInput.classList.remove("valid", "invalid");
+            return;
+        }
+        if (!baseChargee) {
+            designationText.textContent = "⌛ Base en chargement...";
+            addBtn.disabled = true;
             return;
         }
         const produit = rechercherProduit(code);
@@ -375,7 +453,7 @@
             codeInput.classList.add("valid");
             codeInput.classList.remove("invalid");
         } else {
-            designationText.textContent = "❌ Non trouvé";
+            designationText.textContent = "❌ Non trouvé dans la base GitHub";
             dernierProduitValide = null;
             addBtn.disabled = true;
             codeInput.classList.remove("valid");
@@ -394,9 +472,10 @@
         codeInput.classList.remove("valid", "invalid");
     }
 
+    // Ajout d'une ligne depuis la base (produit existant)
     function ajouterDepuisBase() {
         if (!dernierProduitValide) {
-            alert("Code invalide pour la base. Utilisez 'Non base'.");
+            alert("Code invalide ou non trouvé dans la base.");
             return;
         }
         const dlv = dlvInput.value;
@@ -418,6 +497,7 @@
         resetTousLesChamps();
     }
 
+    // Ajout hors base (code non présent dans l'Excel)
     function ajouterHorsBase() {
         let codeSaisi = codeInput.value.trim();
         if (codeSaisi === "") {
@@ -431,6 +511,7 @@
         if (isNaN(prix) || prix < 0) prix = 0;
 
         let codeBarreFinal = "", codeArticleFinal = "";
+        // Règle : si exactement 8 caractères → code article, sinon code barre
         if (codeSaisi.length === 8) {
             codeArticleFinal = codeSaisi;
         } else {
@@ -477,51 +558,12 @@
                 <td>${l.prix.toFixed(0)} Ar</td>
                 <td>${totalLigne.toFixed(0)} Ar</td>
                 <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-             </tr>`;
+            </tr>`;
         });
         tableBody.innerHTML = html;
         tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
+        
+        // Attacher les événements de suppression
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const index = parseInt(btn.getAttribute('data-index'), 10);
-                supprimerLigne(index);
-            });
-        });
-    }
-
-    function escapeHtml(str) {
-        if (!str) return "";
-        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-    }
-
-    function exporterExcel() {
-        if (lignes.length === 0) {
-            alert("Aucune donnée à exporter.");
-            return;
-        }
-        const feuilleData = [["Code barre", "Code article", "Désignation", "Dlv (date)", "Quantité", "Prix unitaire (Ar)", "Total (Ar)"]];
-        lignes.forEach(l => {
-            const dateFormatee = formaterDateFr(l.dlv);
-            feuilleData.push([l.codeBarre, l.codeArticle, l.designation, dateFormatee, l.quantite, l.prix, (l.quantite * l.prix).toFixed(0)]);
-        });
-        const total = lignes.reduce((s, l) => s + (l.quantite * l.prix), 0);
-        feuilleData.push(["", "", "", "", "TOTAL", total.toFixed(0) + " Ar", ""]);
-        const ws = XLSX.utils.aoa_to_sheet(feuilleData);
-        ws['!cols'] = [{wch:16},{wch:16},{wch:28},{wch:14},{wch:6},{wch:12},{wch:12}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Export_Stock");
-        XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
-    }
-
-    // Événements
-    codeInput.addEventListener('input', mettreAJourDesignation);
-    codeInput.addEventListener('blur', mettreAJourDesignation);
-    addBtn.onclick = ajouterDepuisBase;
-    nonBaseBtn.onclick = ajouterHorsBase;
-    exportBtn.onclick = exporterExcel;
-
-    // Lancement
-    chargerProduits();
-</script>
-</body>
-</html>
+       
