@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Final)</title>
+    <title>BOTAKI - Dlv & Prix (Export trié)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -175,9 +175,7 @@
         <div class="table-wrapper">
             <table id="dataTable">
                 <thead>
-                    <tr>
-                        <th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (jj/mm/aaaa)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th>
-                    </tr>
+                    <tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (jj/mm/aaaa)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr><td colspan="8">Chargement de la base...</td></tr>
@@ -185,7 +183,7 @@
             </table>
         </div>
     </div>
-    <footer>✅ Lignes rouges = hors base • "Non base" ajoute avec règle 8 caractères</footer>
+    <footer>✅ Lignes rouges = hors base • L'export Excel trie par Dlv (plus récent en premier)</footer>
 </div>
 
 <script>
@@ -195,7 +193,7 @@
     const COL_DESIGNATION = 2;
 
     let produitsDB = [];
-    let lignes = [];
+    let lignes = [];          // stockage dans l'ordre d'ajout (aucun tri)
     let dernierProduitValide = null;
     let baseChargee = false;
 
@@ -210,13 +208,12 @@
     const exportBtn = document.getElementById('exportBtn');
     const tableBody = document.getElementById('tableBody');
 
-    // Utilitaires
+    // ---------- Utilitaires ----------
     function normaliserCode(code) {
         if (!code) return "";
         return code.toString().replace(/[\s\.\-]/g, '');
     }
 
-    // Convertit "YYYY-MM-DD" en "DD/MM/YYYY"
     function formaterDateFr(dateStr) {
         if (!dateStr) return "";
         const [annee, mois, jour] = dateStr.split('-');
@@ -224,13 +221,12 @@
         return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
     }
 
-    // Convertit une date au format "DD/MM/YYYY" vers un timestamp pour le tri
-    function dateToTimestamp(dateStr) {
+    // Convertit une date "YYYY-MM-DD" en timestamp pour le tri
+    function dateVersTimestamp(dateStr) {
         if (!dateStr) return -Infinity;
-        const parts = dateStr.split('/');
-        if (parts.length !== 3) return -Infinity;
-        const [jour, mois, annee] = parts;
-        const date = new Date(`${annee}-${mois}-${jour}`);
+        const [annee, mois, jour] = dateStr.split('-');
+        if (!annee || !mois || !jour) return -Infinity;
+        const date = new Date(parseInt(annee), parseInt(mois)-1, parseInt(jour));
         return isNaN(date.getTime()) ? -Infinity : date.getTime();
     }
 
@@ -239,16 +235,7 @@
         return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
     }
 
-    // Tri des lignes par date Dlv décroissante (la plus récente en premier)
-    function trierLignes() {
-        lignes.sort((a, b) => {
-            const tsA = a.dlv ? new Date(a.dlv).getTime() : -Infinity;
-            const tsB = b.dlv ? new Date(b.dlv).getTime() : -Infinity;
-            return tsB - tsA; // décroissant
-        });
-    }
-
-    // Affiche le tableau sans ligne de total
+    // Affichage du tableau (dans l'ordre de `lignes`, pas de tri)
     function renderTable() {
         if (lignes.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée.</td></tr>';
@@ -279,7 +266,7 @@
         });
     }
 
-    // Chargement de la base GitHub (silencieux)
+    // ---------- Chargement base Excel depuis GitHub ----------
     async function chargerBase() {
         tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
         try {
@@ -385,8 +372,7 @@
             designation: dernierProduitValide.designation,
             dlv, quantite, prix, horsBase: false
         });
-        trierLignes();
-        renderTable();
+        renderTable();          // pas de tri
         resetTousLesChamps();
     }
 
@@ -409,20 +395,26 @@
             designation: "⚠️ HORS BASE",
             dlv, quantite, prix, horsBase: true
         });
-        trierLignes();
         renderTable();
         resetTousLesChamps();
     }
 
     function supprimerLigne(index) {
         lignes.splice(index, 1);
-        // Pas besoin de retrier car on supprime un élément, l'ordre reste cohérent
         renderTable();
     }
 
-    // Export Excel sans ligne de total
+    // ---------- Export Excel avec tri par Dlv (ordre décroissant : plus récent en premier) ----------
     async function exporterExcel() {
         if (lignes.length === 0) { alert("Aucune donnée à exporter."); return; }
+
+        // Copie et tri des lignes par date Dlv décroissante (les plus récentes en premier)
+        const lignesTriees = [...lignes];
+        lignesTriees.sort((a, b) => {
+            const tsA = dateVersTimestamp(a.dlv);
+            const tsB = dateVersTimestamp(b.dlv);
+            return tsB - tsA; // décroissant
+        });
 
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Export_BOTAKI');
@@ -444,12 +436,12 @@
         const headerRow = worksheet.getRow(1);
         headerRow.eachCell(cell => { cell.style = headerStyle; });
 
-        for (const l of lignes) {
+        for (const l of lignesTriees) {
             const row = worksheet.addRow({
                 codeBarre: l.codeBarre || "",
                 codeArticle: l.codeArticle || "",
                 designation: l.designation || "",
-                dlv: formaterDateFr(l.dlv), // format jj/mm/aaaa
+                dlv: formaterDateFr(l.dlv),
                 quantite: l.quantite,
                 prix: l.prix
             });
@@ -465,7 +457,7 @@
         saveAs(blob, `export_BOTAKI_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
     }
 
-    // Événements
+    // ---------- Événements ----------
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
