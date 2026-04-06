@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard BOTAKI</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #2d4593; /* Bleu */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* HEADER */
+.header {
+    width: 100%;
+    padding: 30px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Logo cercle */
+.logo {
+    width: 80px;
+    height: 80px;
+    background-color: #f4b400; /* Jaune */
+    border-radius: 50%;
+}
+
+/* Texte BOTAKI */
+.title {
+    font-size: 32px;
+    font-weight: bold;
+    color: #f4b400;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #f4b400;
+}
+
+/* CONTENU */
+.container {
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+
+/* BOUTONS */
+button {
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    background-color: #f4b400;
+    color: #2d4593;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background-color: #ffd54f;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="logo"></div>
+    <div>
+        <div class="title">BOTAKI</div>
+        <div class="subtitle">créativité & confiance</div>
+    </div>
+</div>
+
+<!-- BOUTONS -->
+<div class="container">
+    <button onclick="goTo('Dlv.html')">Dlv ou Prix</button>
+    <button onclick="goTo('import.html')">Commande import</button>
+    <button onclick="goTo('Local.html')">Commande Local</button>
+</div>
+
+<script>
+function goTo(page) {
+    window.location.href = page;
+}
+</script>
+
+</body>
+</html>
