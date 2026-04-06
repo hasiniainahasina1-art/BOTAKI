@@ -2,424 +2,374 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix</title>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur Excel BOTAKI - Formaté</title>
+    <!-- Bibliothèque ExcelJS pour les styles avancés -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <!-- FileSaver.js pour déclencher le téléchargement -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            background: linear-gradient(145deg, #b8e1fc 0%, #e0f2fe 100%);
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            padding: 1rem;
-            min-height: 100vh;
-        }
-        .container { max-width: 700px; margin: 0 auto; }
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 24px;
-            padding: 1rem 1.2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 215, 0, 0.6);
-        }
-        .form-vertical { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.2rem; }
-        .field-group { display: flex; flex-direction: column; gap: 0.2rem; }
-        .row-dlv {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #eef2f7;
+            margin: 0;
+            padding: 2rem 1rem;
             display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0.8rem;
+            justify-content: center;
         }
-        .row-dlv .field-group {
-            width: 120px;
-            flex-shrink: 0;
-        }
-        .row-qte-prix {
-            display: flex;
-            flex-wrap: nowrap;
-            gap: 1rem;
-            align-items: flex-end;
-        }
-        .row-qte-prix .field-group {
-            flex: 1;
-        }
-        .designation-text {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #0b3b5f;
-            background: transparent;
-            white-space: nowrap;
-            overflow-x: auto;
-        }
-        label {
-            font-weight: 700;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: #0b3b5f;
-        }
-        input {
-            padding: 0.5rem 0.6rem;
-            border-radius: 20px;
-            border: 1.5px solid #facc15;
-            font-size: 0.75rem;
-            background: white;
+        .container {
+            max-width: 1100px;
             width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        /* Largeur réduite pour Quantité et Prix */
-        .small-input {
-            max-width: 140px;
+        .header {
+            background: #0b3b5f;
+            color: #facc15;
+            padding: 1.2rem 2rem;
         }
-        input:focus {
-            outline: none;
-            border-color: #1e6f9f;
-            box-shadow: 0 0 0 2px rgba(30,111,159,0.2);
+        .header h1 {
+            margin: 0;
+            font-size: 1.6rem;
         }
-        .btn-row {
+        .header p {
+            margin: 0.2rem 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 2rem;
+        }
+        .toolbar {
             display: flex;
-            flex-wrap: nowrap;
-            justify-content: flex-start;
             gap: 1rem;
-            margin-top: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            align-items: center;
         }
         button {
-            padding: 0.5rem 1.2rem;
-            border-radius: 40px;
-            font-weight: 700;
-            font-size: 0.8rem;
+            background: #facc15;
             border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
+            transition: 0.2s;
         }
-        .btn-ajouter { background: #facc15; color: #0b3b5f; }
-        .btn-ajouter:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
-        .btn-nonbase { background: white; color: #b91c1c; border: 2px solid #ef4444; }
-        .btn-exporter { background: #0b3b5f; color: white; }
+        button:hover {
+            background: #ffd966;
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1e2a3e;
+        }
         .table-wrapper {
             overflow-x: auto;
-            border-radius: 20px;
-            border: 1px solid #facc15;
+            border-radius: 16px;
+            border: 1px solid #ddd;
             background: white;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+            text-align: left;
+            vertical-align: top;
         }
         th {
             background: #fef9e6;
-            padding: 0.6rem 0.5rem;
-            text-align: left;
-            border-bottom: 2px solid #facc15;
+            font-weight: bold;
         }
-        td {
-            padding: 0.5rem;
-            border-bottom: 1px solid #fef3c7;
-        }
-        tr.ligne-hors-base { background-color: #fee2e2 !important; }
-        .delete-btn {
-            background: #dc2626;
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 30px;
-            font-size: 0.7rem;
+        input {
+            width: 100%;
             border: none;
-            cursor: pointer;
+            padding: 0.3rem;
+            font-family: inherit;
+            font-size: inherit;
+            background: transparent;
         }
-        .total { background: #fef9e6; font-weight: 800; }
-        footer {
-            text-align: center;
+        input:focus {
+            outline: none;
+            background: #fff8e7;
+        }
+        .add-row {
             margin-top: 1rem;
-            font-size: 0.65rem;
-            color: #2c5a7a;
+            background: #f1f5f9;
+            padding: 0.8rem;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
         }
-        .valid { border-color: #10b981 !important; background-color: #f0fdf4; }
-        .invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
-        @media (max-width: 550px) {
-            .row-dlv { flex-wrap: wrap; }
-            .row-qte-prix { flex-wrap: wrap; }
-            .btn-row { flex-wrap: wrap; justify-content: center; }
-            .small-input { max-width: 100%; }
+        .status {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #2c5a7a;
+            text-align: center;
+        }
+        footer {
+            background: #f8fafc;
+            padding: 0.8rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #5b6e8c;
+            border-top: 1px solid #e2e8f0;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="card">
-        <!-- Formulaire : plus de bandeau de statut -->
-        <div class="form-vertical">
-            <div class="field-group">
-                <label>🔍 Code barre / article *</label>
-                <input type="text" id="codeInput" placeholder="Scanner ou taper" autocomplete="off">
-            </div>
-            <div class="row-dlv">
-                <div class="field-group">
-                    <label>📅 Dlv (date)</label>
-                    <input type="date" id="dlv">
-                </div>
-                <span id="designationText" class="designation-text"></span>
-            </div>
-            <div class="row-qte-prix">
-                <div class="field-group">
-                    <label>📦 Quantité</label>
-                    <input type="number" id="quantite" class="small-input" step="1" value="1" min="1" max="999999" maxlength="6" inputmode="numeric" oninput="if(this.value.length>6) this.value=this.value.slice(0,6)">
-                </div>
-                <div class="field-group">
-                    <label>💰 Prix (Ar)</label>
-                    <input type="number" id="prix" class="small-input" step="1" value="" placeholder="Ariary" min="0" max="9999999999" inputmode="numeric" oninput="if(this.value.length>10) this.value=this.value.slice(0,10)">
-                </div>
-            </div>
-        </div>
-
-        <div class="btn-row">
-            <button id="addBtn" class="btn-ajouter" disabled>➕ Ajouter (Base)</button>
-            <button id="nonBaseBtn" class="btn-nonbase">⚠️ Non base</button>
-            <button id="exportBtn" class="btn-exporter">📎 Exporter Excel</button>
-        </div>
+    <div class="header">
+        <h1>📎 BOTAKI - Générateur Excel professionnel</h1>
+        <p>Créez votre fichier avec en-têtes gras, centrage, prix formaté (10 000 Ar) et total automatique</p>
     </div>
+    <div class="content">
+        <div class="toolbar">
+            <button id="exportBtn">✨ Télécharger base_botaki.xlsx</button>
+            <button id="resetBtn" class="btn-secondary">🔄 Réinitialiser les exemples</button>
+        </div>
 
-    <div class="card" style="padding: 0.8rem;">
         <div class="table-wrapper">
             <table id="dataTable">
-                <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (date)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr></thead>
-                <tbody id="tableBody"><tr><td colspan="8">Chargement de la base...</td></tr></tbody>
-                <tfoot id="tableFooter"></tfoot>
+                <thead>
+                    <tr>
+                        <th>Code barre</th>
+                        <th>Code article</th>
+                        <th>Désignation</th>
+                        <th>Dlv (date)</th>
+                        <th>Quantité</th>
+                        <th>Prix (Ar, nombre)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Les lignes seront insérées ici dynamiquement -->
+                </tbody>
             </table>
         </div>
+        <div class="add-row" id="addRowBtn">+ Ajouter une ligne</div>
+        <div id="statusMsg" class="status"></div>
     </div>
-    <footer>✅ Lignes rouges = hors base • "Non base" ajoute avec règle 8 caractères</footer>
+    <footer>✅ Le fichier Excel généré aura : en-têtes gras/centrés, cellules centrées, prix formaté "10 000 Ar", et une ligne TOTAL GÉNÉRAL en bas.</footer>
 </div>
 
 <script>
-    const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
-    const COL_CODE_BARRE = 0;
-    const COL_CODE_ARTICLE = 1;
-    const COL_DESIGNATION = 2;
+    // Données par défaut (exemples)
+    let defaultData = [
+        ["123456789", "ART001", "Produit A", "2025-04-10", 5, 10000],
+        ["987654321", "ART002", "Produit B", "2025-04-11", 2, 1250],
+        ["555666777", "ART003", "Produit C", "2025-04-12", 10, 999]
+    ];
 
-    let produitsDB = [];
-    let lignes = [];
-    let dernierProduitValide = null;
-    let baseChargee = false;
+    // Stockage interne des lignes (sous forme de tableau d'objets ou de tableaux)
+    let rowsData = [];
 
-    const codeInput = document.getElementById('codeInput');
-    const dlvInput = document.getElementById('dlv');
-    const designationText = document.getElementById('designationText');
-    const quantiteInput = document.getElementById('quantite');
-    const prixInput = document.getElementById('prix');
-    const addBtn = document.getElementById('addBtn');
-    const nonBaseBtn = document.getElementById('nonBaseBtn');
-    const exportBtn = document.getElementById('exportBtn');
+    // Références DOM
     const tableBody = document.getElementById('tableBody');
-    const tableFooter = document.getElementById('tableFooter');
+    const exportBtn = document.getElementById('exportBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const addRowBtn = document.getElementById('addRowBtn');
+    const statusMsg = document.getElementById('statusMsg');
 
-    function normaliserCode(code) {
-        if (!code) return "";
-        return code.toString().replace(/[\s\.\-]/g, '');
-    }
-
-    function formaterDateFr(dateStr) {
-        if (!dateStr) return "";
-        const [annee, mois, jour] = dateStr.split('-');
-        return `${jour}/${mois}/${annee}`;
-    }
-
-    function escapeHtml(str) {
-        if (!str) return "";
-        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-    }
-
-    async function chargerBase() {
-        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
-            const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
-            clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Fichier vide");
-
-            let startRow = 0;
-            const firstRow = rows[0];
-            if (firstRow && firstRow.length > 0) {
-                const firstCell = (firstRow[0] || "").toString().toLowerCase();
-                if (firstCell.includes("code") || firstCell.includes("barre") || firstCell.includes("ean")) startRow = 1;
-            }
-
-            const produits = [];
-            for (let i = startRow; i < rows.length; i++) {
-                const row = rows[i];
-                if (!row || row.length === 0) continue;
-                const codeBarre = row[COL_CODE_BARRE]?.toString().trim() || "";
-                const codeArticle = row[COL_CODE_ARTICLE]?.toString().trim() || "";
-                let designation = row[COL_DESIGNATION]?.toString().trim() || "";
-                if (!designation && (codeBarre || codeArticle)) designation = `Produit ${codeBarre || codeArticle}`;
-                if (codeBarre || codeArticle) produits.push({ codeBarre, codeArticle, designation });
-            }
-            produitsDB = produits;
-            baseChargee = true;
-            console.log(`Base chargée : ${produitsDB.length} produits`);
-            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
-            else renderTable();
-        } catch (err) {
-            console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
-            baseChargee = false;
-        }
-    }
-
-    function rechercherProduit(identifiant) {
-        if (!identifiant.trim() || !baseChargee) return null;
-        const idNormalise = normaliserCode(identifiant.trim());
-        return produitsDB.find(p => normaliserCode(p.codeBarre) === idNormalise || normaliserCode(p.codeArticle) === idNormalise);
-    }
-
-    function mettreAJourDesignation() {
-        const code = codeInput.value.trim();
-        if (!code) {
-            designationText.textContent = "";
-            dernierProduitValide = null;
-            addBtn.disabled = true;
-            codeInput.classList.remove("valid", "invalid");
-            return;
-        }
-        if (!baseChargee) {
-            designationText.textContent = "⌛ Base en chargement...";
-            addBtn.disabled = true;
-            return;
-        }
-        const produit = rechercherProduit(code);
-        if (produit) {
-            designationText.textContent = produit.designation;
-            dernierProduitValide = produit;
-            addBtn.disabled = false;
-            codeInput.classList.add("valid");
-            codeInput.classList.remove("invalid");
-        } else {
-            designationText.textContent = "❌ Non trouvé";
-            dernierProduitValide = null;
-            addBtn.disabled = true;
-            codeInput.classList.remove("valid");
-            codeInput.classList.add("invalid");
-        }
-    }
-
-    function resetTousLesChamps() {
-        codeInput.value = "";
-        dlvInput.value = "";
-        quantiteInput.value = "1";
-        prixInput.value = "";
-        designationText.textContent = "";
-        dernierProduitValide = null;
-        addBtn.disabled = true;
-        codeInput.classList.remove("valid", "invalid");
-    }
-
-    function ajouterDepuisBase() {
-        if (!dernierProduitValide) { alert("Code invalide ou non trouvé."); return; }
-        const dlv = dlvInput.value;
-        let quantite = parseInt(quantiteInput.value, 10);
-        if (isNaN(quantite) || quantite <= 0) quantite = 1;
-        if (quantite > 999999) quantite = 999999;
-        let prix = parseFloat(prixInput.value);
-        if (isNaN(prix) || prix < 0) prix = 0;
-        if (prix > 9999999999) prix = 9999999999;
-        lignes.push({
-            codeBarre: dernierProduitValide.codeBarre,
-            codeArticle: dernierProduitValide.codeArticle,
-            designation: dernierProduitValide.designation,
-            dlv, quantite, prix, horsBase: false
-        });
-        renderTable();
-        resetTousLesChamps();
-    }
-
-    function ajouterHorsBase() {
-        let codeSaisi = codeInput.value.trim();
-        if (!codeSaisi) { alert("Veuillez saisir un code."); return; }
-        const dlv = dlvInput.value;
-        let quantite = parseInt(quantiteInput.value, 10);
-        if (isNaN(quantite) || quantite <= 0) quantite = 1;
-        if (quantite > 999999) quantite = 999999;
-        let prix = parseFloat(prixInput.value);
-        if (isNaN(prix) || prix < 0) prix = 0;
-        if (prix > 9999999999) prix = 9999999999;
-        let codeBarreFinal = "", codeArticleFinal = "";
-        if (codeSaisi.length === 8) codeArticleFinal = codeSaisi;
-        else codeBarreFinal = codeSaisi;
-        lignes.push({
-            codeBarre: codeBarreFinal,
-            codeArticle: codeArticleFinal,
-            designation: "⚠️ HORS BASE",
-            dlv, quantite, prix, horsBase: true
-        });
-        renderTable();
-        resetTousLesChamps();
-    }
-
-    function supprimerLigne(index) {
-        lignes.splice(index, 1);
-        renderTable();
-    }
-
+    // Fonction pour re-rendre le tableau HTML à partir de rowsData
     function renderTable() {
-        if (lignes.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée.</td></tr>';
-            tableFooter.innerHTML = "";
+        tableBody.innerHTML = '';
+        for (let i = 0; i < rowsData.length; i++) {
+            const row = rowsData[i];
+            const tr = document.createElement('tr');
+            // 6 colonnes
+            for (let j = 0; j < 6; j++) {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = (j === 4 || j === 5) ? 'number' : 'text';
+                if (j === 4) input.step = "1";
+                if (j === 5) input.step = "100";
+                input.value = row[j] !== undefined && row[j] !== null ? row[j] : '';
+                input.addEventListener('change', (function(rowIdx, colIdx) {
+                    return function(e) {
+                        let val = e.target.value;
+                        if (colIdx === 4 || colIdx === 5) {
+                            val = parseFloat(val);
+                            if (isNaN(val)) val = 0;
+                        }
+                        rowsData[rowIdx][colIdx] = val;
+                        updateStatus();
+                    };
+                })(i, j));
+                td.appendChild(input);
+                tr.appendChild(td);
+            }
+            // Bouton supprimer (colonne action)
+            const tdAction = document.createElement('td');
+            const delBtn = document.createElement('button');
+            delBtn.textContent = '🗑️';
+            delBtn.style.background = '#dc2626';
+            delBtn.style.color = 'white';
+            delBtn.style.border = 'none';
+            delBtn.style.borderRadius = '30px';
+            delBtn.style.padding = '0.2rem 0.6rem';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.fontSize = '0.7rem';
+            delBtn.onclick = (function(idx) { return function() { deleteRow(idx); }; })(i);
+            tdAction.appendChild(delBtn);
+            tr.appendChild(tdAction);
+            tableBody.appendChild(tr);
+        }
+        updateStatus();
+    }
+
+    function deleteRow(index) {
+        rowsData.splice(index, 1);
+        renderTable();
+    }
+
+    function addEmptyRow() {
+        rowsData.push(["", "", "", "", 1, 0]);
+        renderTable();
+    }
+
+    function updateStatus() {
+        const total = rowsData.reduce((sum, row) => {
+            const qte = parseFloat(row[4]) || 0;
+            const prix = parseFloat(row[5]) || 0;
+            return sum + (qte * prix);
+        }, 0);
+        statusMsg.innerHTML = `📊 ${rowsData.length} ligne(s) · Total général : ${total.toLocaleString('fr-FR')} Ar`;
+    }
+
+    // Générer le fichier Excel avec ExcelJS (styles complets)
+    async function generateExcel() {
+        if (rowsData.length === 0) {
+            alert("Aucune donnée à exporter. Ajoutez des lignes.");
             return;
         }
-        let html = "";
+
+        // Créer un classeur
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Produits_BOTAKI');
+
+        // 1) Définir les colonnes (largeurs)
+        worksheet.columns = [
+            { header: 'Code barre', key: 'codeBarre', width: 18 },
+            { header: 'Code article', key: 'codeArticle', width: 18 },
+            { header: 'Désignation', key: 'designation', width: 30 },
+            { header: 'Dlv', key: 'dlv', width: 14 },
+            { header: 'Quantité', key: 'quantite', width: 12 },
+            { header: 'Prix (Ar)', key: 'prix', width: 16 }
+        ];
+
+        // Style pour l'en-tête : gras, centré, fond jaune pâle
+        const headerStyle = {
+            font: { bold: true, color: { argb: 'FF0b3b5f' } },
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } }
+        };
+
+        // Appliquer le style d'en-tête sur la première ligne (row 1)
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell, colNumber) => {
+            cell.style = headerStyle;
+        });
+
+        // Remplir les données
         let totalGeneral = 0;
-        lignes.forEach((l, idx) => {
-            const totalLigne = l.quantite * l.prix;
+        for (let i = 0; i < rowsData.length; i++) {
+            const row = rowsData[i];
+            const codeBarre = row[0] || '';
+            const codeArticle = row[1] || '';
+            const designation = row[2] || '';
+            const dlv = row[3] || '';
+            let quantite = parseFloat(row[4]) || 0;
+            let prix = parseFloat(row[5]) || 0;
+            if (isNaN(quantite)) quantite = 0;
+            if (isNaN(prix)) prix = 0;
+            const totalLigne = quantite * prix;
             totalGeneral += totalLigne;
-            const rowClass = l.horsBase ? 'class="ligne-hors-base"' : '';
-            const dateFormatee = formaterDateFr(l.dlv);
-            html += `<tr ${rowClass}>
-                <td>${escapeHtml(l.codeBarre) || "—"}</td>
-                <td>${escapeHtml(l.codeArticle) || "—"}</td>
-                <td>${escapeHtml(l.designation)}</td>
-                <td>${escapeHtml(dateFormatee)}</td>
-                <td>${l.quantite}</td>
-                <td>${l.prix.toFixed(0)} Ar</td>
-                <td>${totalLigne.toFixed(0)} Ar</td>
-                <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-             </tr>`;
+
+            const dataRow = worksheet.addRow({
+                codeBarre: codeBarre,
+                codeArticle: codeArticle,
+                designation: designation,
+                dlv: dlv,
+                quantite: quantite,
+                prix: prix
+            });
+
+            // Centrer toutes les cellules de la ligne
+            dataRow.eachCell((cell) => {
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            });
+
+            // Application du format personnalisé pour la colonne prix (affichage "10 000 Ar")
+            const prixCell = dataRow.getCell(6);
+            // Le format personnalisé dans Excel : # ##0 "Ar"
+            prixCell.numFmt = '# ##0 "Ar"';
+        }
+
+        // Ajouter une ligne de total général
+        const totalRow = worksheet.addRow({
+            codeBarre: '',
+            codeArticle: '',
+            designation: '',
+            dlv: '',
+            quantite: 'TOTAL GÉNÉRAL',
+            prix: totalGeneral
         });
-        tableBody.innerHTML = html;
-        tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', () => supprimerLigne(parseInt(btn.dataset.index,10)));
+        totalRow.eachCell((cell) => {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.font = { bold: true, italic: true };
         });
+        // Appliquer le format prix à la cellule du total
+        const totalPrixCell = totalRow.getCell(6);
+        totalPrixCell.numFmt = '# ##0 "Ar"';
+        // Fusionner les cellules vides de la ligne total ? Non, laisser comme ça
+
+        // Optionnel : ajouter une bordure légère
+        // Ajuster la hauteur des lignes
+        worksheet.eachRow((row, rowNumber) => {
+            row.height = 20;
+        });
+
+        // Générer le fichier et le télécharger
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `base_botaki_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+        statusMsg.innerHTML = '✅ Fichier Excel généré et téléchargé !';
     }
 
-    function exporterExcel() {
-        if (lignes.length === 0) { alert("Aucune donnée à exporter."); return; }
-        const feuilleData = [["Code barre","Code article","Désignation","Dlv (date)","Quantité","Prix unitaire (Ar)","Total (Ar)"]];
-        lignes.forEach(l => {
-            feuilleData.push([l.codeBarre, l.codeArticle, l.designation, formaterDateFr(l.dlv), l.quantite, l.prix, (l.quantite*l.prix).toFixed(0)]);
-        });
-        const total = lignes.reduce((s,l)=>s+(l.quantite*l.prix),0);
-        feuilleData.push(["","","","","TOTAL",total.toFixed(0)+" Ar",""]);
-        const ws = XLSX.utils.aoa_to_sheet(feuilleData);
-        ws['!cols'] = [{wch:16},{wch:16},{wch:28},{wch:14},{wch:6},{wch:12},{wch:12}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Export_Stock");
-        XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+    // Initialiser les données
+    function initData() {
+        rowsData = [];
+        for (let row of defaultData) {
+            rowsData.push([...row]);
+        }
+        renderTable();
     }
 
-    codeInput.addEventListener('input', mettreAJourDesignation);
-    codeInput.addEventListener('blur', mettreAJourDesignation);
-    addBtn.onclick = ajouterDepuisBase;
-    nonBaseBtn.onclick = ajouterHorsBase;
-    exportBtn.onclick = exporterExcel;
+    // Réinitialiser aux exemples
+    function resetToExample() {
+        initData();
+        statusMsg.innerHTML = 'Exemples chargés.';
+    }
 
-    chargerBase();
+    // Événements
+    exportBtn.addEventListener('click', generateExcel);
+    resetBtn.addEventListener('click', resetToExample);
+    addRowBtn.addEventListener('click', addEmptyRow);
+
+    // Démarrer
+    initData();
 </script>
 </body>
 </html>
