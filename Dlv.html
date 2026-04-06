@@ -24,10 +24,39 @@
         }
         .form-vertical { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.2rem; }
         .field-group { display: flex; flex-direction: column; gap: 0.2rem; }
-        .row-dlv { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.8rem; }
-        .row-dlv .field-group { width: 120px; flex-shrink: 0; }
-        .designation-text { font-size: 0.75rem; font-weight: 500; color: #0b3b5f; white-space: nowrap; overflow-x: auto; }
-        label { font-weight: 700; font-size: 0.7rem; text-transform: uppercase; color: #0b3b5f; }
+        .row-dlv {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .row-dlv .field-group {
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .row-qte-prix {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        .row-qte-prix .field-group {
+            flex: 1;
+        }
+        .designation-text {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #0b3b5f;
+            background: transparent;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+        label {
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #0b3b5f;
+        }
         input {
             padding: 0.5rem 0.6rem;
             border-radius: 20px;
@@ -36,8 +65,22 @@
             background: white;
             width: 100%;
         }
-        input:focus { outline: none; border-color: #1e6f9f; box-shadow: 0 0 0 2px rgba(30,111,159,0.2); }
-        .btn-row { display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 1rem; margin-top: 0.5rem; }
+        /* Largeur réduite pour Quantité et Prix */
+        .small-input {
+            max-width: 140px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #1e6f9f;
+            box-shadow: 0 0 0 2px rgba(30,111,159,0.2);
+        }
+        .btn-row {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
         button {
             padding: 0.5rem 1.2rem;
             border-radius: 40px;
@@ -54,33 +97,58 @@
         .btn-ajouter:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
         .btn-nonbase { background: white; color: #b91c1c; border: 2px solid #ef4444; }
         .btn-exporter { background: #0b3b5f; color: white; }
-        .table-wrapper { overflow-x: auto; border-radius: 20px; border: 1px solid #facc15; background: white; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-        th { background: #fef9e6; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 2px solid #facc15; }
-        td { padding: 0.5rem; border-bottom: 1px solid #fef3c7; }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #facc15;
+            background: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        th {
+            background: #fef9e6;
+            padding: 0.6rem 0.5rem;
+            text-align: left;
+            border-bottom: 2px solid #facc15;
+        }
+        td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #fef3c7;
+        }
         tr.ligne-hors-base { background-color: #fee2e2 !important; }
-        .delete-btn { background: #dc2626; color: white; padding: 0.2rem 0.6rem; border-radius: 30px; font-size: 0.7rem; border: none; cursor: pointer; }
+        .delete-btn {
+            background: #dc2626;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            border: none;
+            cursor: pointer;
+        }
         .total { background: #fef9e6; font-weight: 800; }
-        footer { text-align: center; margin-top: 1rem; font-size: 0.65rem; color: #2c5a7a; }
+        footer {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.65rem;
+            color: #2c5a7a;
+        }
         .valid { border-color: #10b981 !important; background-color: #f0fdf4; }
         .invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
-        .status-bar {
-            background: #fef9e6;
-            border-radius: 20px;
-            padding: 0.5rem 0.8rem;
-            margin-bottom: 0.8rem;
-            font-size: 0.75rem;
-            color: #0b3b5f;
-            text-align: center;
+        @media (max-width: 550px) {
+            .row-dlv { flex-wrap: wrap; }
+            .row-qte-prix { flex-wrap: wrap; }
+            .btn-row { flex-wrap: wrap; justify-content: center; }
+            .small-input { max-width: 100%; }
         }
-        @media (max-width: 550px) { .row-dlv { flex-wrap: wrap; } .btn-row { flex-wrap: wrap; justify-content: center; } }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="card">
-        <div class="status-bar" id="statusBar">⏳ Initialisation...</div>
-
+        <!-- Formulaire : plus de bandeau de statut -->
         <div class="form-vertical">
             <div class="field-group">
                 <label>🔍 Code barre / article *</label>
@@ -93,13 +161,15 @@
                 </div>
                 <span id="designationText" class="designation-text"></span>
             </div>
-            <div class="field-group">
-                <label>📦 Quantité</label>
-                <input type="number" id="quantite" step="1" value="1" min="1" max="999999" maxlength="6" inputmode="numeric" oninput="if(this.value.length>6) this.value=this.value.slice(0,6)">
-            </div>
-            <div class="field-group">
-                <label>💰 Prix (Ar)</label>
-                <input type="number" id="prix" step="1" value="" placeholder="Ariary" min="0" max="9999999999" inputmode="numeric" oninput="if(this.value.length>10) this.value=this.value.slice(0,10)">
+            <div class="row-qte-prix">
+                <div class="field-group">
+                    <label>📦 Quantité</label>
+                    <input type="number" id="quantite" class="small-input" step="1" value="1" min="1" max="999999" maxlength="6" inputmode="numeric" oninput="if(this.value.length>6) this.value=this.value.slice(0,6)">
+                </div>
+                <div class="field-group">
+                    <label>💰 Prix (Ar)</label>
+                    <input type="number" id="prix" class="small-input" step="1" value="" placeholder="Ariary" min="0" max="9999999999" inputmode="numeric" oninput="if(this.value.length>10) this.value=this.value.slice(0,10)">
+                </div>
             </div>
         </div>
 
@@ -143,13 +213,6 @@
     const exportBtn = document.getElementById('exportBtn');
     const tableBody = document.getElementById('tableBody');
     const tableFooter = document.getElementById('tableFooter');
-    const statusBar = document.getElementById('statusBar');
-
-    function setStatus(text, isError = false) {
-        statusBar.innerHTML = (isError ? '❌ ' : '✅ ') + text;
-        if (isError) console.error(text);
-        else console.log(text);
-    }
 
     function normaliserCode(code) {
         if (!code) return "";
@@ -168,8 +231,7 @@
     }
 
     async function chargerBase() {
-        setStatus("Téléchargement du fichier Excel...");
-        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement en cours...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -177,7 +239,6 @@
             clearTimeout(timeoutId);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
-            setStatus("Lecture du fichier...");
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
@@ -202,12 +263,12 @@
             }
             produitsDB = produits;
             baseChargee = true;
-            setStatus(`Base chargée : ${produitsDB.length} produits`);
+            console.log(`Base chargée : ${produitsDB.length} produits`);
             if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             else renderTable();
         } catch (err) {
-            setStatus(`Erreur : ${err.message}`, true);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Échec chargement : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
+            console.error(err);
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
             baseChargee = false;
         }
     }
@@ -328,7 +389,7 @@
                 <td>${l.prix.toFixed(0)} Ar</td>
                 <td>${totalLigne.toFixed(0)} Ar</td>
                 <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-            </tr>`;
+             </tr>`;
         });
         tableBody.innerHTML = html;
         tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
