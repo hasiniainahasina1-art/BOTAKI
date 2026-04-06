@@ -72,19 +72,6 @@
             font-size: 0.75rem;
             color: #0b3b5f;
             text-align: center;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .refresh-btn {
-            background: #2d4593;
-            color: white;
-            border: none;
-            padding: 0.2rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            cursor: pointer;
         }
         @media (max-width: 550px) { .row-dlv { flex-wrap: wrap; } .btn-row { flex-wrap: wrap; justify-content: center; } }
     </style>
@@ -92,10 +79,7 @@
 <body>
 <div class="container">
     <div class="card">
-        <div class="status-bar" id="statusBar">
-            <span>⏳ Initialisation...</span>
-            <button class="refresh-btn" id="refreshBtn">⟳ Recharger</button>
-        </div>
+        <div class="status-bar" id="statusBar">⏳ Initialisation...</div>
 
         <div class="form-vertical">
             <div class="field-group">
@@ -110,11 +94,11 @@
                 <span id="designationText" class="designation-text"></span>
             </div>
             <div class="field-group">
-                <label>📦 Quantité (max 6 chiffres)</label>
+                <label>📦 Quantité</label>
                 <input type="number" id="quantite" step="1" value="1" min="1" max="999999" maxlength="6" inputmode="numeric" oninput="if(this.value.length>6) this.value=this.value.slice(0,6)">
             </div>
             <div class="field-group">
-                <label>💰 Prix (Ar) (jusqu'à 10 chiffres)</label>
+                <label>💰 Prix (Ar)</label>
                 <input type="number" id="prix" step="1" value="" placeholder="Ariary" min="0" max="9999999999" inputmode="numeric" oninput="if(this.value.length>10) this.value=this.value.slice(0,10)">
             </div>
         </div>
@@ -139,19 +123,16 @@
 </div>
 
 <script>
-    // ================= CONFIGURATION =================
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
     const COL_CODE_BARRE = 0;
     const COL_CODE_ARTICLE = 1;
     const COL_DESIGNATION = 2;
-    // =================================================
 
     let produitsDB = [];
     let lignes = [];
     let dernierProduitValide = null;
     let baseChargee = false;
 
-    // DOM elements
     const codeInput = document.getElementById('codeInput');
     const dlvInput = document.getElementById('dlv');
     const designationText = document.getElementById('designationText');
@@ -162,11 +143,10 @@
     const exportBtn = document.getElementById('exportBtn');
     const tableBody = document.getElementById('tableBody');
     const tableFooter = document.getElementById('tableFooter');
-    const statusSpan = document.querySelector('#statusBar span');
-    const refreshBtn = document.getElementById('refreshBtn');
+    const statusBar = document.getElementById('statusBar');
 
     function setStatus(text, isError = false) {
-        statusSpan.innerHTML = (isError ? '❌ ' : '✅ ') + text;
+        statusBar.innerHTML = (isError ? '❌ ' : '✅ ') + text;
         if (isError) console.error(text);
         else console.log(text);
     }
@@ -179,8 +159,7 @@
     function formaterDateFr(dateStr) {
         if (!dateStr) return "";
         const [annee, mois, jour] = dateStr.split('-');
-        if (!annee || !mois || !jour) return dateStr;
-        return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
+        return `${jour}/${mois}/${annee}`;
     }
 
     function escapeHtml(str) {
@@ -189,7 +168,7 @@
     }
 
     async function chargerBase() {
-        setStatus("Téléchargement du fichier Excel depuis GitHub...");
+        setStatus("Téléchargement du fichier Excel...");
         tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement en cours...</td></tr>';
         try {
             const controller = new AbortController();
@@ -198,34 +177,32 @@
             clearTimeout(timeoutId);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
-            setStatus("Lecture du fichier Excel...");
+            setStatus("Lecture du fichier...");
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Le fichier Excel est vide");
+            if (!rows || rows.length < 2) throw new Error("Fichier vide");
 
             let startRow = 0;
             const firstRow = rows[0];
             if (firstRow && firstRow.length > 0) {
                 const firstCell = (firstRow[0] || "").toString().toLowerCase();
-                if (firstCell.includes("code") || firstCell.includes("barre") || firstCell.includes("ean") || firstCell.includes("ref")) {
-                    startRow = 1;
-                }
+                if (firstCell.includes("code") || firstCell.includes("barre") || firstCell.includes("ean")) startRow = 1;
             }
 
             const produits = [];
             for (let i = startRow; i < rows.length; i++) {
                 const row = rows[i];
                 if (!row || row.length === 0) continue;
-                const codeBarre = (row[COL_CODE_BARRE] !== undefined && row[COL_CODE_BARRE] !== null) ? row[COL_CODE_BARRE].toString().trim() : "";
-                const codeArticle = (row[COL_CODE_ARTICLE] !== undefined && row[COL_CODE_ARTICLE] !== null) ? row[COL_CODE_ARTICLE].toString().trim() : "";
-                let designation = (row[COL_DESIGNATION] !== undefined && row[COL_DESIGNATION] !== null) ? row[COL_DESIGNATION].toString().trim() : "";
+                const codeBarre = row[COL_CODE_BARRE]?.toString().trim() || "";
+                const codeArticle = row[COL_CODE_ARTICLE]?.toString().trim() || "";
+                let designation = row[COL_DESIGNATION]?.toString().trim() || "";
                 if (!designation && (codeBarre || codeArticle)) designation = `Produit ${codeBarre || codeArticle}`;
                 if (codeBarre || codeArticle) produits.push({ codeBarre, codeArticle, designation });
             }
             produitsDB = produits;
             baseChargee = true;
-            setStatus(`Base chargée : ${produitsDB.length} produits (${new Date().toLocaleTimeString()})`);
+            setStatus(`Base chargée : ${produitsDB.length} produits`);
             if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             else renderTable();
         } catch (err) {
@@ -237,18 +214,13 @@
 
     function rechercherProduit(identifiant) {
         if (!identifiant.trim() || !baseChargee) return null;
-        const idClean = identifiant.trim();
-        const idNormalise = normaliserCode(idClean);
-        return produitsDB.find(p => {
-            const barreNorm = normaliserCode(p.codeBarre);
-            const articleNorm = normaliserCode(p.codeArticle);
-            return barreNorm === idNormalise || articleNorm === idNormalise;
-        });
+        const idNormalise = normaliserCode(identifiant.trim());
+        return produitsDB.find(p => normaliserCode(p.codeBarre) === idNormalise || normaliserCode(p.codeArticle) === idNormalise);
     }
 
     function mettreAJourDesignation() {
         const code = codeInput.value.trim();
-        if (code === "") {
+        if (!code) {
             designationText.textContent = "";
             dernierProduitValide = null;
             addBtn.disabled = true;
@@ -262,13 +234,13 @@
         }
         const produit = rechercherProduit(code);
         if (produit) {
-            designationText.textContent = produit.designation || "✅ Produit trouvé";
+            designationText.textContent = produit.designation;
             dernierProduitValide = produit;
             addBtn.disabled = false;
             codeInput.classList.add("valid");
             codeInput.classList.remove("invalid");
         } else {
-            designationText.textContent = "❌ Non trouvé dans la base";
+            designationText.textContent = "❌ Non trouvé";
             dernierProduitValide = null;
             addBtn.disabled = true;
             codeInput.classList.remove("valid");
@@ -361,7 +333,7 @@
         tableBody.innerHTML = html;
         tableFooter.innerHTML = `<tr class="total"><td colspan="6" style="text-align:right;">TOTAL GÉNÉRAL :</td><td colspan="2">${totalGeneral.toFixed(0)} Ar</td></tr>`;
         document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => supprimerLigne(parseInt(btn.dataset.index,10)));
+            btn.addEventListener('click', () => supprimerLigne(parseInt(btn.dataset.index,10)));
         });
     }
 
@@ -380,13 +352,11 @@
         XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
     }
 
-    // Événements
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
     nonBaseBtn.onclick = ajouterHorsBase;
     exportBtn.onclick = exporterExcel;
-    refreshBtn.onclick = () => chargerBase();
 
     chargerBase();
 </script>
