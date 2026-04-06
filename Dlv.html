@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Export trié)</title>
+    <title>BOTAKI - Dlv & Prix (Export trié croissant)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -178,12 +178,12 @@
                     <tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (jj/mm/aaaa)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="8">Chargement de la base...</td></tr>
+                    <tr><td colspan="8">Chargement de la base......</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
-    <footer>✅ Lignes rouges = hors base • L'export Excel trie par Dlv (plus récent en premier)</footer>
+    <footer>✅ Lignes rouges = hors base • L'export Excel trie par Dlv croissant (du plus ancien au plus récent)</footer>
 </div>
 
 <script>
@@ -193,7 +193,7 @@
     const COL_DESIGNATION = 2;
 
     let produitsDB = [];
-    let lignes = [];          // stockage dans l'ordre d'ajout (aucun tri)
+    let lignes = [];          // stockage dans l'ordre d'ajout
     let dernierProduitValide = null;
     let baseChargee = false;
 
@@ -221,7 +221,6 @@
         return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
     }
 
-    // Convertit une date "YYYY-MM-DD" en timestamp pour le tri
     function dateVersTimestamp(dateStr) {
         if (!dateStr) return -Infinity;
         const [annee, mois, jour] = dateStr.split('-');
@@ -235,7 +234,6 @@
         return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
     }
 
-    // Affichage du tableau (dans l'ordre de `lignes`, pas de tri)
     function renderTable() {
         if (lignes.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée.</td></tr>';
@@ -266,7 +264,7 @@
         });
     }
 
-    // ---------- Chargement base Excel depuis GitHub ----------
+    // ---------- Chargement base ----------
     async function chargerBase() {
         tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
         try {
@@ -372,7 +370,7 @@
             designation: dernierProduitValide.designation,
             dlv, quantite, prix, horsBase: false
         });
-        renderTable();          // pas de tri
+        renderTable();
         resetTousLesChamps();
     }
 
@@ -404,16 +402,16 @@
         renderTable();
     }
 
-    // ---------- Export Excel avec tri par Dlv (ordre décroissant : plus récent en premier) ----------
+    // ---------- Export Excel avec tri croissant (du plus ancien au plus récent) ----------
     async function exporterExcel() {
         if (lignes.length === 0) { alert("Aucune donnée à exporter."); return; }
 
-        // Copie et tri des lignes par date Dlv décroissante (les plus récentes en premier)
+        // Copie et tri croissant (dates les plus anciennes en premier)
         const lignesTriees = [...lignes];
         lignesTriees.sort((a, b) => {
             const tsA = dateVersTimestamp(a.dlv);
             const tsB = dateVersTimestamp(b.dlv);
-            return tsB - tsA; // décroissant
+            return tsA - tsB;   // ordre croissant
         });
 
         const workbook = new ExcelJS.Workbook();
