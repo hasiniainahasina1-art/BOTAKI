@@ -24,6 +24,13 @@
         td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; }
         .clickable-row { cursor: pointer; }
         .clickable-row:hover td { background: #fef9c3; }
+        /* Style pour les produits déjà commandés (rouge clair) */
+        .commanded-row {
+            background-color: #fee2e2 !important;
+        }
+        .commanded-row td {
+            background-color: #fee2e2 !important;
+        }
         .info, .success { background: #dbeafe; padding: 12px; border-radius: 16px; margin: 16px 0; text-align: center; }
         .error { background: #fee2e2; color: #b91c1c; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -36,7 +43,6 @@
         .action-btn { background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 30px; cursor: pointer; font-size: 0.75rem; margin: 0 3px; }
         .delete-btn { background: #ef4444; }
         .edit-btn { background: #f59e0b; }
-        .duplicate-row { background-color: #fee2e2 !important; }
         .export-btn { background: #10b981; color: white; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; margin-top: 10px; }
         footer { margin-top: 24px; font-size: 0.75rem; text-align: center; color: #64748b; }
         .save-status { position: fixed; bottom: 10px; right: 10px; background: #2d4593cc; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; backdrop-filter: blur(4px); pointer-events: none; z-index: 1000; }
@@ -61,7 +67,7 @@
             <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>PCB</th><th>Fournisseur</th></tr></thead>
             <tbody id="tableBody"><tr><td colspan="5">Aucune donnée</td></tr></tbody>
         </table>
-        <p style="font-size:0.8rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander cet article.</p>
+        <p style="font-size:0.8rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander cet article. Les produits déjà commandés apparaissent en rouge.</p>
     </div>
 
     <div id="orderModal" class="modal">
@@ -92,10 +98,10 @@
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
-    // ================= CONFIGURATION CORRECTE =================
+    // ================= CONFIGURATION =================
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/CADENCIER.xlsx';
     const STORAGE_KEY_ORDERS = 'BOTAKI_local_orders';
-    // ===========================================================
+    // =================================================
 
     let allRows = [];
     let orders = [];
@@ -119,6 +125,7 @@
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const saveStatusDiv = document.getElementById('saveStatus');
 
+    // ---------- Sauvegarde / chargement des commandes ----------
     function sauvegarderCommandes() {
         localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
         saveStatusDiv.style.opacity = '1';
@@ -131,8 +138,16 @@
             try { orders = JSON.parse(saved); if (!Array.isArray(orders)) orders = []; } catch(e) { orders = []; }
         } else orders = [];
         renderCart();
+        // Mettre à jour le surlignage dans le tableau des produits si déjà chargé
+        if (allRows.length) filterTable();
     }
 
+    // ---------- Vérifier si un article a déjà été commandé ----------
+    function isArticleCommanded(article) {
+        return orders.some(order => order.codeArticle === article.codeArticle && order.fournisseur === article.fournisseur);
+    }
+
+    // ---------- Chargement base Excel ----------
     async function chargerBaseExcel() {
         statusMsg.innerHTML = '⏳ Téléchargement de la base CADENCIER...';
         tableContainer.style.display = 'none';
@@ -187,6 +202,7 @@
         }
     }
 
+    // ---------- Filtre + surlignage des produits commandés ----------
     function filterTable() {
         if (!allRows.length) return;
         const term = fournisseurInput.value.trim().toLowerCase();
@@ -199,6 +215,10 @@
         filtered.forEach(article => {
             const tr = document.createElement('tr');
             tr.classList.add('clickable-row');
+            // Ajouter la classe "commanded-row" si l'article a déjà été commandé
+            if (isArticleCommanded(article)) {
+                tr.classList.add('commanded-row');
+            }
             tr.addEventListener('click', () => openOrderModal(article, null));
             tr.appendChild(createCell(article.codeBarre));
             tr.appendChild(createCell(article.codeArticle));
@@ -215,6 +235,7 @@
         return td;
     }
 
+    // ---------- Gestion de la commande ----------
     function openOrderModal(article, editIdx) {
         currentSelectedArticle = article;
         editIndex = editIdx;
@@ -251,6 +272,8 @@
         else orders.push(newOrder);
         renderCart();
         sauvegarderCommandes();
+        // Rafraîchir le tableau des produits pour mettre à jour le surlignage
+        filterTable();
         closeModal();
     }
 
@@ -258,6 +281,7 @@
         orders.splice(index, 1);
         renderCart();
         sauvegarderCommandes();
+        filterTable(); // met à jour le surlignage
     }
 
     function editOrder(index) {
@@ -275,16 +299,9 @@
             cartBody.innerHTML = '<tr><td colspan="6">Aucune commande ajoutée</td></tr>';
             return;
         }
-        const countMap = new Map();
-        orders.forEach(order => {
-            const key = `${order.codeArticle}|${order.fournisseur}`;
-            countMap.set(key, (countMap.get(key) || 0) + 1);
-        });
         cartBody.innerHTML = '';
         orders.forEach((order, idx) => {
             const tr = document.createElement('tr');
-            const key = `${order.codeArticle}|${order.fournisseur}`;
-            if (countMap.get(key) > 1) tr.classList.add('duplicate-row');
             tr.appendChild(createCell(order.codeArticle));
             tr.appendChild(createCell(order.designation));
             tr.appendChild(createCell(order.pcb));
@@ -306,6 +323,7 @@
         });
     }
 
+    // ---------- Export Excel ----------
     async function exportToExcel() {
         if (orders.length === 0) { alert("Aucune commande à exporter"); return; }
         const defaultName = `commandes_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`;
@@ -346,6 +364,7 @@
         saveAs(blob, fileName);
     }
 
+    // ---------- Événements ----------
     fournisseurInput.addEventListener('input', filterTable);
     confirmOrderBtn.addEventListener('click', saveOrder);
     cancelOrderBtn.addEventListener('click', closeModal);
@@ -353,6 +372,7 @@
     exportExcelBtn.addEventListener('click', exportToExcel);
     refreshBtn.addEventListener('click', () => { chargerBaseExcel(); });
 
+    // ---------- Initialisation ----------
     chargerCommandes();
     chargerBaseExcel();
 </script>
