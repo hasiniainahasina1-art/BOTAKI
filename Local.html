@@ -8,195 +8,38 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', sans-serif;
-        }
-        body {
-            background: #f0f2f5;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 28px;
-            padding: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            color: #1e293b;
-        }
-        .info-area {
-            background: #f8fafc;
-            border-radius: 20px;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .status {
-            font-weight: 500;
-            color: #0f172a;
-        }
-        .refresh-btn {
-            background: #2d4593;
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 40px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .filter-area {
-            margin: 20px 0;
-        }
-        label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 8px;
-        }
-        #fournisseurInput {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 1rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 40px;
-        }
-        .table-wrapper {
-            overflow-x: auto;
-            margin-top: 20px;
-            border-radius: 16px;
-            border: 1px solid #e2e8f0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th {
-            background: #0f172a;
-            color: white;
-            padding: 12px;
-            text-align: center;
-        }
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #e2e8f0;
-            text-align: center;
-        }
-        .clickable-row {
-            cursor: pointer;
-        }
-        .clickable-row:hover td {
-            background: #fef9c3;
-        }
-        .info, .success {
-            background: #dbeafe;
-            padding: 12px;
-            border-radius: 16px;
-            margin: 16px 0;
-            text-align: center;
-        }
-        .error {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 24px;
-            border-radius: 28px;
-            width: 320px;
-            text-align: center;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 15px 0;
-            border-radius: 40px;
-            border: 1px solid #cbd5e1;
-            font-size: 1rem;
-        }
-        .modal-content button {
-            padding: 8px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 40px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-add {
-            background: #3b82f6;
-            color: white;
-        }
-        .btn-cancel {
-            background: #e2e8f0;
-        }
-        .commandes-table {
-            margin-top: 30px;
-        }
-        .action-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            margin: 0 3px;
-        }
-        .delete-btn {
-            background: #ef4444;
-        }
-        .edit-btn {
-            background: #f59e0b;
-        }
-        .duplicate-row {
-            background-color: #fee2e2 !important;
-        }
-        .export-btn {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        footer {
-            margin-top: 24px;
-            font-size: 0.75rem;
-            text-align: center;
-            color: #64748b;
-        }
-        .save-status {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: #2d4593cc;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            backdrop-filter: blur(4px);
-            pointer-events: none;
-            z-index: 1000;
-        }
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
+        body { background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 28px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1, h2 { color: #1e293b; }
+        .info-area { background: #f8fafc; border-radius: 20px; padding: 16px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .status { font-weight: 500; color: #0f172a; }
+        .refresh-btn { background: #2d4593; color: white; border: none; padding: 6px 16px; border-radius: 40px; cursor: pointer; font-weight: 600; }
+        .filter-area { margin: 20px 0; }
+        label { font-weight: 600; display: block; margin-bottom: 8px; }
+        #fournisseurInput { width: 100%; padding: 12px 16px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 40px; }
+        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0f172a; color: white; padding: 12px; text-align: center; }
+        td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; }
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover td { background: #fef9c3; }
+        .info, .success { background: #dbeafe; padding: 12px; border-radius: 16px; margin: 16px 0; text-align: center; }
+        .error { background: #fee2e2; color: #b91c1c; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 24px; border-radius: 28px; width: 320px; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
+        .modal-content input { width: 100%; padding: 10px; margin: 15px 0; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; }
+        .modal-content button { padding: 8px 20px; margin: 5px; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; }
+        .btn-add { background: #3b82f6; color: white; }
+        .btn-cancel { background: #e2e8f0; }
+        .commandes-table { margin-top: 30px; }
+        .action-btn { background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 30px; cursor: pointer; font-size: 0.75rem; margin: 0 3px; }
+        .delete-btn { background: #ef4444; }
+        .edit-btn { background: #f59e0b; }
+        .duplicate-row { background-color: #fee2e2 !important; }
+        .export-btn { background: #10b981; color: white; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        footer { margin-top: 24px; font-size: 0.75rem; text-align: center; color: #64748b; }
+        .save-status { position: fixed; bottom: 10px; right: 10px; background: #2d4593cc; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; backdrop-filter: blur(4px); pointer-events: none; z-index: 1000; }
     </style>
 </head>
 <body>
@@ -221,7 +64,6 @@
         <p style="font-size:0.8rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander cet article.</p>
     </div>
 
-    <!-- Modal de commande -->
     <div id="orderModal" class="modal">
         <div class="modal-content">
             <h3>🛒 Votre commande</h3>
@@ -245,23 +87,22 @@
             <tbody id="cartBody"><tr><td colspan="6">Aucune commande ajoutée</td></tr></tbody>
         </table>
     </div>
-    <footer>⚡ Les commandes sont sauvegardées automatiquement. L'export Excel ne contient pas la colonne PCB (conforme).</footer>
+    <footer>⚡ Les commandes sont sauvegardées automatiquement. L'export Excel ne contient pas la colonne PCB.</footer>
 </div>
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
-    // ================= CONFIGURATION =================
-    const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/CADENCIERp.xlsx';
+    // ================= CONFIGURATION CORRECTE =================
+    const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/CADENCIER.xlsx';
     const STORAGE_KEY_ORDERS = 'BOTAKI_local_orders';
-    // Structure attendue : A=Code barre, B=Code article, C=Désignation, D=PCB, E=Fournisseur
-    // =================================================
+    // ===========================================================
 
-    let allRows = [];           // articles chargés depuis l'Excel
-    let orders = [];            // commandes
-    let editIndex = null;       // index en cours d'édition
+    let allRows = [];
+    let orders = [];
+    let editIndex = null;
     let currentSelectedArticle = null;
 
-    // DOM elements
+    // DOM
     const statusMsg = document.getElementById('statusMsg');
     const refreshBtn = document.getElementById('refreshBtn');
     const filterArea = document.getElementById('filterArea');
@@ -276,31 +117,24 @@
     const confirmOrderBtn = document.getElementById('confirmOrderBtn');
     const cancelOrderBtn = document.getElementById('cancelOrderBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
-    const saveStatus = document.getElementById('saveStatus');
+    const saveStatusDiv = document.getElementById('saveStatus');
 
-    // ---------- Sauvegarde / chargement des commandes ----------
     function sauvegarderCommandes() {
         localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
-        saveStatus.style.opacity = '1';
-        setTimeout(() => { saveStatus.style.opacity = '0'; }, 1500);
+        saveStatusDiv.style.opacity = '1';
+        setTimeout(() => { saveStatusDiv.style.opacity = '0'; }, 1500);
     }
 
     function chargerCommandes() {
         const saved = localStorage.getItem(STORAGE_KEY_ORDERS);
         if (saved) {
-            try {
-                orders = JSON.parse(saved);
-                if (!Array.isArray(orders)) orders = [];
-            } catch(e) { orders = []; }
-        } else {
-            orders = [];
-        }
+            try { orders = JSON.parse(saved); if (!Array.isArray(orders)) orders = []; } catch(e) { orders = []; }
+        } else orders = [];
         renderCart();
     }
 
-    // ---------- Chargement de la base Excel depuis GitHub ----------
     async function chargerBaseExcel() {
-        statusMsg.innerHTML = '⏳ Téléchargement de la base CADENCIET...';
+        statusMsg.innerHTML = '⏳ Téléchargement de la base CADENCIER...';
         tableContainer.style.display = 'none';
         filterArea.style.display = 'none';
         try {
@@ -308,14 +142,13 @@
             const timeoutId = setTimeout(() => controller.abort(), 20000);
             const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier introuvable (404)`);
+            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier introuvable. Vérifiez que le fichier CADENCIER.xlsx est bien présent sur GitHub.`);
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Le fichier Excel est vide");
+            if (!rows || rows.length < 2) throw new Error("Fichier Excel vide");
 
-            // Détection automatique de la ligne d'en-tête (sauter si première ligne contient "code")
             let startRow = 0;
             const firstRow = rows[0];
             if (firstRow && firstRow.length > 0) {
@@ -324,37 +157,36 @@
             }
 
             const produits = [];
+            let lastSupplier = "";
             for (let i = startRow; i < rows.length; i++) {
                 const row = rows[i];
                 if (!row || row.length === 0) continue;
-                const codeBarre = (row[0] !== undefined && row[0] !== null) ? row[0].toString().trim() : "";
-                const codeArticle = (row[1] !== undefined && row[1] !== null) ? row[1].toString().trim() : "";
-                const designation = (row[2] !== undefined && row[2] !== null) ? row[2].toString().trim() : "";
-                const pcb = (row[3] !== undefined && row[3] !== null) ? row[3].toString().trim() : "";
-                let fournisseur = (row[4] !== undefined && row[4] !== null) ? row[4].toString().trim() : "";
-                // Propager le fournisseur si vide (comme avant)
-                if (fournisseur === "" && produits.length > 0) fournisseur = produits[produits.length-1].fournisseur;
+                const codeBarre = (row[0] != null) ? row[0].toString().trim() : "";
+                const codeArticle = (row[1] != null) ? row[1].toString().trim() : "";
+                const designation = (row[2] != null) ? row[2].toString().trim() : "";
+                const pcb = (row[3] != null) ? row[3].toString().trim() : "";
+                let fournisseur = (row[4] != null) ? row[4].toString().trim() : "";
+                if (fournisseur === "") fournisseur = lastSupplier;
+                else lastSupplier = fournisseur;
                 if (codeBarre || codeArticle || designation) {
                     produits.push({ codeBarre, codeArticle, designation, pcb, fournisseur });
                 }
             }
             allRows = produits;
             if (allRows.length === 0) throw new Error("Aucune donnée exploitable");
-
-            statusMsg.innerHTML = `✅ Base chargée : ${allRows.length} articles (CADENCIET)`;
+            statusMsg.innerHTML = `✅ Base chargée : ${allRows.length} articles (CADENCIER)`;
             filterArea.style.display = 'block';
             tableContainer.style.display = 'block';
-            filterTable(); // afficher les articles
+            filterTable();
         } catch (err) {
             console.error(err);
-            statusMsg.innerHTML = `❌ Erreur : ${err.message}. Vérifiez l'URL du fichier Excel sur GitHub.`;
+            statusMsg.innerHTML = `❌ Erreur : ${err.message}`;
             tableContainer.style.display = 'none';
             filterArea.style.display = 'none';
             allRows = [];
         }
     }
 
-    // ---------- Filtre par fournisseur ----------
     function filterTable() {
         if (!allRows.length) return;
         const term = fournisseurInput.value.trim().toLowerCase();
@@ -383,7 +215,6 @@
         return td;
     }
 
-    // ---------- Gestion de la commande (modal) ----------
     function openOrderModal(article, editIdx) {
         currentSelectedArticle = article;
         editIndex = editIdx;
@@ -408,10 +239,7 @@
     function saveOrder() {
         if (!currentSelectedArticle) return;
         const qty = parseInt(commandeQty.value);
-        if (isNaN(qty) || qty <= 0) {
-            alert("Quantité invalide");
-            return;
-        }
+        if (isNaN(qty) || qty <= 0) { alert("Quantité invalide"); return; }
         const newOrder = {
             codeArticle: currentSelectedArticle.codeArticle,
             designation: currentSelectedArticle.designation,
@@ -419,11 +247,8 @@
             commande: qty,
             fournisseur: currentSelectedArticle.fournisseur
         };
-        if (editIndex !== null) {
-            orders[editIndex] = newOrder;
-        } else {
-            orders.push(newOrder);
-        }
+        if (editIndex !== null) orders[editIndex] = newOrder;
+        else orders.push(newOrder);
         renderCart();
         sauvegarderCommandes();
         closeModal();
@@ -440,7 +265,6 @@
         const article = allRows.find(a => a.codeArticle === order.codeArticle && a.fournisseur === order.fournisseur);
         if (article) openOrderModal(article, index);
         else {
-            // fallback si article non trouvé (rare)
             const fakeArticle = { codeArticle: order.codeArticle, designation: order.designation, pcb: order.pcb, fournisseur: order.fournisseur, codeBarre: "" };
             openOrderModal(fakeArticle, index);
         }
@@ -482,12 +306,8 @@
         });
     }
 
-    // ---------- Export Excel (sans PCB, avec nom personnalisé) ----------
     async function exportToExcel() {
-        if (orders.length === 0) {
-            alert("Aucune commande à exporter");
-            return;
-        }
+        if (orders.length === 0) { alert("Aucune commande à exporter"); return; }
         const defaultName = `commandes_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`;
         let fileName = prompt("Nom du fichier (sans extension) :", defaultName);
         if (fileName === null) return;
@@ -518,9 +338,7 @@
         });
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber > 1) {
-                row.eachCell(cell => {
-                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                });
+                row.eachCell(cell => { cell.alignment = { horizontal: 'center', vertical: 'middle' }; });
             }
         });
         const buffer = await workbook.xlsx.writeBuffer();
@@ -528,17 +346,13 @@
         saveAs(blob, fileName);
     }
 
-    // ---------- Événements ----------
     fournisseurInput.addEventListener('input', filterTable);
     confirmOrderBtn.addEventListener('click', saveOrder);
     cancelOrderBtn.addEventListener('click', closeModal);
     window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     exportExcelBtn.addEventListener('click', exportToExcel);
-    refreshBtn.addEventListener('click', () => {
-        chargerBaseExcel();
-    });
+    refreshBtn.addEventListener('click', () => { chargerBaseExcel(); });
 
-    // ---------- Initialisation ----------
     chargerCommandes();
     chargerBaseExcel();
 </script>
