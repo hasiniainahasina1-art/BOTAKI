@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Sauvegarde auto)</title>
+    <title>BOTAKI - Dlv & Prix (Sauvegarde auto + nom personnalisé)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -196,7 +196,7 @@
             </table>
         </div>
     </div>
-    <footer>✅ Sauvegarde automatique • L'export Excel trie par Dlv croissant</footer>
+    <footer>✅ Sauvegarde automatique • Export Excel trié (croissant) • Nom personnalisable</footer>
 </div>
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
@@ -208,7 +208,7 @@
     const STORAGE_KEY = 'BOTAKI_lignes';
 
     let produitsDB = [];
-    let lignes = [];          // stockage dans l'ordre d'ajout
+    let lignes = [];
     let dernierProduitValide = null;
     let baseChargee = false;
 
@@ -224,10 +224,9 @@
     const tableBody = document.getElementById('tableBody');
     const saveStatus = document.getElementById('saveStatus');
 
-    // ---------- Sauvegarde & chargement localStorage ----------
+    // ---------- Sauvegarde & chargement ----------
     function sauvegarderLignes() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lignes));
-        // Afficher un indicateur temporaire
         saveStatus.style.opacity = '1';
         setTimeout(() => { saveStatus.style.opacity = '0'; }, 1500);
     }
@@ -237,7 +236,6 @@
         if (saved) {
             try {
                 lignes = JSON.parse(saved);
-                // Vérifier l'intégrité minimale
                 if (!Array.isArray(lignes)) lignes = [];
             } catch(e) { lignes = []; }
         } else {
@@ -303,7 +301,6 @@
 
     // ---------- Chargement base Excel ----------
     async function chargerBase() {
-        // On ne touche pas aux lignes déjà chargées depuis localStorage
         if (lignes.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement de la base...</td></tr>';
         } else {
@@ -449,15 +446,26 @@
         sauvegarderLignes();
     }
 
-    // ---------- Export Excel avec tri croissant ----------
+    // ---------- Export Excel avec nom personnalisé ----------
     async function exporterExcel() {
         if (lignes.length === 0) { alert("Aucune donnée à exporter."); return; }
 
+        // Demander le nom du fichier
+        const dateStr = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+        const defaultName = `export_BOTAKI_${dateStr}`;
+        let fileName = prompt("Nom du fichier (sans extension) :", defaultName);
+        if (fileName === null) return; // annulation
+        if (fileName.trim() === "") fileName = defaultName;
+        // Nettoyer le nom (enlever les caractères interdits)
+        fileName = fileName.replace(/[\\/*?:"<>|]/g, '');
+        if (!fileName.endsWith('.xlsx')) fileName += '.xlsx';
+
+        // Trier les lignes par date croissante
         const lignesTriees = [...lignes];
         lignesTriees.sort((a, b) => {
             const tsA = dateVersTimestamp(a.dlv);
             const tsB = dateVersTimestamp(b.dlv);
-            return tsA - tsB;   // croissant
+            return tsA - tsB;
         });
 
         const workbook = new ExcelJS.Workbook();
@@ -498,14 +506,14 @@
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        saveAs(blob, `export_BOTAKI_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+        saveAs(blob, fileName);
     }
 
     // ---------- Initialisation ----------
     function init() {
         chargerLignesSauvegardees();
         if (lignes.length > 0) renderTable();
-        chargerBase(); // charge la base de produits sans écraser les lignes
+        chargerBase();
     }
 
     // Événements
