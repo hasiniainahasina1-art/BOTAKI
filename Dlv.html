@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Export trié croissant)</title>
+    <title>BOTAKI - Dlv & Prix (Sauvegarde auto)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -129,6 +129,19 @@
         }
         .valid { border-color: #10b981 !important; background-color: #f0fdf4; }
         .invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
+        .save-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #2d4593cc;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
         @media (max-width: 550px) {
             .row-dlv { flex-wrap: wrap; }
             .row-qte-prix { flex-wrap: wrap; }
@@ -178,19 +191,21 @@
                     <tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (jj/mm/aaaa)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="8">Chargement de la base......</td></tr>
+                    <tr><td colspan="8">Chargement...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
-    <footer>✅ Lignes rouges = hors base • L'export Excel trie par Dlv croissant (du plus ancien au plus récent)</footer>
+    <footer>✅ Sauvegarde automatique • L'export Excel trie par Dlv croissant</footer>
 </div>
+<div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
     const COL_CODE_BARRE = 0;
     const COL_CODE_ARTICLE = 1;
     const COL_DESIGNATION = 2;
+    const STORAGE_KEY = 'BOTAKI_lignes';
 
     let produitsDB = [];
     let lignes = [];          // stockage dans l'ordre d'ajout
@@ -207,6 +222,28 @@
     const nonBaseBtn = document.getElementById('nonBaseBtn');
     const exportBtn = document.getElementById('exportBtn');
     const tableBody = document.getElementById('tableBody');
+    const saveStatus = document.getElementById('saveStatus');
+
+    // ---------- Sauvegarde & chargement localStorage ----------
+    function sauvegarderLignes() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(lignes));
+        // Afficher un indicateur temporaire
+        saveStatus.style.opacity = '1';
+        setTimeout(() => { saveStatus.style.opacity = '0'; }, 1500);
+    }
+
+    function chargerLignesSauvegardees() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                lignes = JSON.parse(saved);
+                // Vérifier l'intégrité minimale
+                if (!Array.isArray(lignes)) lignes = [];
+            } catch(e) { lignes = []; }
+        } else {
+            lignes = [];
+        }
+    }
 
     // ---------- Utilitaires ----------
     function normaliserCode(code) {
@@ -236,7 +273,7 @@
 
     function renderTable() {
         if (lignes.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée. Vous pouvez en ajouter.</td></tr>';
             return;
         }
         let html = "";
@@ -264,9 +301,14 @@
         });
     }
 
-    // ---------- Chargement base ----------
+    // ---------- Chargement base Excel ----------
     async function chargerBase() {
-        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
+        // On ne touche pas aux lignes déjà chargées depuis localStorage
+        if (lignes.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement de la base...</td></tr>';
+        } else {
+            renderTable();
+        }
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -303,7 +345,9 @@
             else renderTable();
         } catch (err) {
             console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
+            if (lignes.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
+            }
             baseChargee = false;
         }
     }
@@ -371,6 +415,7 @@
             dlv, quantite, prix, horsBase: false
         });
         renderTable();
+        sauvegarderLignes();
         resetTousLesChamps();
     }
 
@@ -394,24 +439,25 @@
             dlv, quantite, prix, horsBase: true
         });
         renderTable();
+        sauvegarderLignes();
         resetTousLesChamps();
     }
 
     function supprimerLigne(index) {
         lignes.splice(index, 1);
         renderTable();
+        sauvegarderLignes();
     }
 
-    // ---------- Export Excel avec tri croissant (du plus ancien au plus récent) ----------
+    // ---------- Export Excel avec tri croissant ----------
     async function exporterExcel() {
         if (lignes.length === 0) { alert("Aucune donnée à exporter."); return; }
 
-        // Copie et tri croissant (dates les plus anciennes en premier)
         const lignesTriees = [...lignes];
         lignesTriees.sort((a, b) => {
             const tsA = dateVersTimestamp(a.dlv);
             const tsB = dateVersTimestamp(b.dlv);
-            return tsA - tsB;   // ordre croissant
+            return tsA - tsB;   // croissant
         });
 
         const workbook = new ExcelJS.Workbook();
@@ -455,14 +501,21 @@
         saveAs(blob, `export_BOTAKI_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
     }
 
-    // ---------- Événements ----------
+    // ---------- Initialisation ----------
+    function init() {
+        chargerLignesSauvegardees();
+        if (lignes.length > 0) renderTable();
+        chargerBase(); // charge la base de produits sans écraser les lignes
+    }
+
+    // Événements
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
     nonBaseBtn.onclick = ajouterHorsBase;
     exportBtn.onclick = exporterExcel;
 
-    chargerBase();
+    init();
 </script>
 </body>
 </html>
