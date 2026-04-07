@@ -195,7 +195,6 @@
 <div class="container">
     <h1>BOTAKI - Commandes (CADENCIER)</h1>
 
-    <!-- Éléments masqués en arrière-plan (fonctionnels mais invisibles) -->
     <div id="statusMsg" class="hidden">⏳ Chargement...</div>
     <button id="refreshBtn" class="hidden">⟳ Recharger</button>
 
@@ -348,7 +347,7 @@
         let filtered = allRows;
         if (fournisseurTerm) filtered = filtered.filter(r => r.fournisseur.toLowerCase().includes(fournisseurTerm));
         if (designationTerm) filtered = filtered.filter(r => r.designation.toLowerCase().includes(designationTerm));
-        if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="5">Aucun article</td></tr>'; return; }
+        if (filtered.length === 0) { tableBody.innerHTML = '<td><td colspan="5">Aucun article</td></tr>'; return; }
         tableBody.innerHTML = '';
         filtered.forEach(article => {
             const tr = document.createElement('tr');
@@ -405,7 +404,7 @@
     }
 
     function renderCart() {
-        if (orders.length === 0) { cartBody.innerHTML = '<tr><td colspan="6">Aucune commande</td></tr>'; return; }
+        if (orders.length === 0) { cartBody.innerHTML = '<td><td colspan="6">Aucune commande</td></tr>'; return; }
         cartBody.innerHTML = '';
         orders.forEach((order, idx) => {
             const tr = document.createElement('tr');
@@ -435,37 +434,57 @@
         }
     }
 
+    // ----- FINAL EXPORT : regroupement par fournisseur (ordre d'apparition) -----
     async function exportToExcel() {
         if (orders.length === 0) { alert("Aucune commande"); return; }
         let fileName = prompt("Nom du fichier (sans extension)", `commandes_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`);
         if (!fileName) return;
         fileName = fileName.replace(/[\\/*?:"<>|]/g, '') + '.xlsx';
+
+        // Regrouper par fournisseur en conservant l'ordre de première apparition
+        const grouped = new Map();
+        for (const order of orders) {
+            const f = order.fournisseur || "Sans fournisseur";
+            if (!grouped.has(f)) grouped.set(f, []);
+            grouped.get(f).push(order);
+        }
+
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Commandes');
+
         worksheet.columns = [
             { header: 'Code Article', key: 'codeArticle', width: 20 },
             { header: 'Désignation', key: 'designation', width: 30 },
             { header: 'Commande', key: 'commande', width: 12 },
             { header: 'Fournisseur', key: 'fournisseur', width: 20 }
         ];
-        worksheet.getRow(1).eachCell(cell => { cell.font = { bold: true }; cell.alignment = { horizontal: 'center' }; });
-        orders.forEach(order => worksheet.addRow({ codeArticle: order.codeArticle, designation: order.designation, commande: order.commande, fournisseur: order.fournisseur }));
-        worksheet.eachRow((row, i) => { if (i > 1) row.eachCell(cell => cell.alignment = { horizontal: 'center' }); });
-        const buffer = await workbook.xlsx.writeBuffer();
-        saveAs(new Blob([buffer]), fileName);
-    }
 
-    fournisseurInput.addEventListener('input', filterTable);
-    designationFilter.addEventListener('input', filterTable);
-    confirmOrderBtn.addEventListener('click', saveOrder);
-    cancelOrderBtn.addEventListener('click', closeModal);
-    window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-    exportExcelBtn.addEventListener('click', exportToExcel);
-    resetOrdersBtn.addEventListener('click', resetAllOrders);
-    refreshBtn.addEventListener('click', () => chargerBaseExcel());
+        // Style en-tête
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell(cell => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0f172a' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
 
-    chargerCommandes();
-    chargerBaseExcel();
-</script>
-</body>
-</html>
+        let currentRow = 2;
+        const fournisseurs = Array.from(grouped.keys());
+
+        for (let i = 0; i < fournisseurs.length; i++) {
+            const fournisseur = fournisseurs[i];
+            const commandes = grouped.get(fournisseur);
+
+            // Ligne titre du fournisseur
+            const titleRow = worksheet.getRow(currentRow);
+            titleRow.getCell(1).value = `*** ${fournisseur} ***`;
+            titleRow.getCell(1).font = { bold: true, italic: true };
+            titleRow.getCell(1).alignment = { horizontal: 'left' };
+            for (let c = 2; c <= 4; c++) titleRow.getCell(c).value = '';
+            currentRow++;
+
+            // Lignes des commandes
+            for (const order of commandes) {
+                const row = worksheet.getRow(currentRow);
+                row.getCell(1).value = order.codeArticle || "";
+                row.getCell(2).value = order.designation || "";
+                row.getCell(3).value = order.co
