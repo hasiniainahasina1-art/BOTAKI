@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Commandes locales (CADENCIER) - Mobile</title>
+    <title>BOTAKI - Commandes (CADENCIER)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -27,41 +27,36 @@
         }
         h1 {
             font-size: 1.4rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #1e293b;
         }
-        h2 {
-            font-size: 1.2rem;
-        }
-        .info-area {
-            background: #f8fafc;
-            border-radius: 20px;
-            padding: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .status {
-            font-size: 0.85rem;
-        }
-        .refresh-btn {
-            background: #2d4593;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 40px;
-            font-size: 0.8rem;
+        .hidden {
+            display: none;
         }
         .filter-area {
             margin: 16px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 140px;
         }
         label {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            display: block;
+            margin-bottom: 4px;
         }
-        #fournisseurInput {
+        input {
             width: 100%;
             padding: 10px 14px;
             font-size: 0.9rem;
@@ -97,7 +92,6 @@
         .clickable-row:active td {
             background: #fef9c3;
         }
-        /* Rouge foncé pour les articles commandés */
         .commanded-row {
             background-color: #b91c1c !important;
             color: white !important;
@@ -106,7 +100,6 @@
             background-color: #b91c1c !important;
             color: white !important;
         }
-        /* Modal flottant */
         .modal {
             display: none;
             position: fixed;
@@ -126,14 +119,6 @@
             width: 85%;
             max-width: 320px;
             text-align: center;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
-        }
-        .modal-content h3 {
-            margin-bottom: 16px;
-        }
-        .modal-content p {
-            margin: 8px 0;
-            font-size: 0.9rem;
         }
         .modal-content input {
             width: 100%;
@@ -151,18 +136,10 @@
             border-radius: 40px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.9rem;
         }
-        .btn-add {
-            background: #3b82f6;
-            color: white;
-        }
-        .btn-cancel {
-            background: #e2e8f0;
-        }
-        .commandes-table {
-            margin-top: 30px;
-        }
+        .btn-add { background: #3b82f6; color: white; }
+        .btn-cancel { background: #e2e8f0; }
+        .commandes-table { margin-top: 30px; }
         .action-btn {
             background: #3b82f6;
             color: white;
@@ -173,12 +150,8 @@
             font-size: 0.7rem;
             margin: 0 3px;
         }
-        .delete-btn {
-            background: #ef4444;
-        }
-        .edit-btn {
-            background: #f59e0b;
-        }
+        .delete-btn { background: #ef4444; }
+        .edit-btn { background: #f59e0b; }
         .export-btn, .reset-btn {
             background: #10b981;
             color: white;
@@ -189,15 +162,8 @@
             cursor: pointer;
             font-size: 0.85rem;
         }
-        .reset-btn {
-            background: #dc2626;
-        }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+        .reset-btn { background: #dc2626; }
+        .button-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         footer {
             margin-top: 20px;
             font-size: 0.65rem;
@@ -227,16 +193,23 @@
 </head>
 <body>
 <div class="container">
-    <h1>📦 BOTAKI - Commandes (CADENCIER)</h1>
+    <h1>BOTAKI - Commandes (CADENCIER)</h1>
 
-    <div class="info-area">
-        <div class="status" id="statusMsg">⏳ Chargement...</div>
-        <button class="refresh-btn" id="refreshBtn">⟳ Recharger</button>
-    </div>
+    <!-- Éléments masqués en arrière-plan (fonctionnels mais invisibles) -->
+    <div id="statusMsg" class="hidden">⏳ Chargement...</div>
+    <button id="refreshBtn" class="hidden">⟳ Recharger</button>
 
     <div class="filter-area" id="filterArea" style="display: none;">
-        <label>🏷️ Filtrer fournisseur :</label>
-        <input type="text" id="fournisseurInput" placeholder="Ex: DUPONT" autocomplete="off">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>🏷️ Fournisseur</label>
+                <input type="text" id="fournisseurInput" placeholder="Ex: DUPONT" autocomplete="off">
+            </div>
+            <div class="filter-group">
+                <label>🔍 Désignation</label>
+                <input type="text" id="designationFilter" placeholder="Rechercher dans la désignation" autocomplete="off">
+            </div>
+        </div>
     </div>
 
     <div class="table-wrapper" id="tableContainer" style="display: none;">
@@ -247,7 +220,6 @@
         <p style="font-size:0.7rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander. Les articles déjà commandés sont en rouge foncé.</p>
     </div>
 
-    <!-- Modal flottant pour la commande -->
     <div id="orderModal" class="modal">
         <div class="modal-content">
             <h3>🛒 Passer commande</h3>
@@ -284,12 +256,12 @@
 
     let allRows = [], orders = [], editIndex = null, currentSelectedArticle = null;
 
-    // DOM
     const statusMsg = document.getElementById('statusMsg');
     const refreshBtn = document.getElementById('refreshBtn');
     const filterArea = document.getElementById('filterArea');
     const tableContainer = document.getElementById('tableContainer');
     const fournisseurInput = document.getElementById('fournisseurInput');
+    const designationFilter = document.getElementById('designationFilter');
     const tableBody = document.getElementById('tableBody');
     const cartBody = document.getElementById('cartBody');
     const modal = document.getElementById('orderModal');
@@ -305,7 +277,7 @@
     function sauvegarderCommandes() {
         localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
         saveStatusDiv.style.opacity = '1';
-        setTimeout(() => { saveStatusDiv.style.opacity = '0'; }, 1500);
+        setTimeout(() => saveStatusDiv.style.opacity = '0', 1500);
     }
 
     function chargerCommandes() {
@@ -321,7 +293,7 @@
     }
 
     async function chargerBaseExcel() {
-        statusMsg.innerHTML = '⏳ Téléchargement...';
+        statusMsg.innerText = '⏳ Téléchargement...';
         tableContainer.style.display = 'none';
         filterArea.style.display = 'none';
         try {
@@ -358,22 +330,24 @@
                 if (codeBarre || codeArticle || designation) produits.push({ codeBarre, codeArticle, designation, pcb, fournisseur });
             }
             allRows = produits;
-            statusMsg.innerHTML = `✅ ${allRows.length} articles (CADENCIER)`;
             filterArea.style.display = 'block';
             tableContainer.style.display = 'block';
             filterTable();
         } catch (err) {
-            statusMsg.innerHTML = `❌ Erreur : ${err.message}`;
-            tableContainer.style.display = 'none';
+            console.error(err);
             filterArea.style.display = 'none';
+            tableContainer.style.display = 'none';
             allRows = [];
         }
     }
 
     function filterTable() {
         if (!allRows.length) return;
-        const term = fournisseurInput.value.trim().toLowerCase();
-        const filtered = term === "" ? allRows : allRows.filter(r => r.fournisseur.toLowerCase().includes(term));
+        const fournisseurTerm = fournisseurInput.value.trim().toLowerCase();
+        const designationTerm = designationFilter.value.trim().toLowerCase();
+        let filtered = allRows;
+        if (fournisseurTerm) filtered = filtered.filter(r => r.fournisseur.toLowerCase().includes(fournisseurTerm));
+        if (designationTerm) filtered = filtered.filter(r => r.designation.toLowerCase().includes(designationTerm));
         if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="5">Aucun article</td></tr>'; return; }
         tableBody.innerHTML = '';
         filtered.forEach(article => {
@@ -451,14 +425,13 @@
         });
     }
 
-    // Réinitialiser toutes les commandes
     function resetAllOrders() {
         if (orders.length === 0) return;
         if (confirm("Voulez-vous vraiment réinitialiser toutes les commandes ?")) {
             orders = [];
             sauvegarderCommandes();
             renderCart();
-            filterTable(); // enlève le surlignage rouge
+            filterTable();
         }
     }
 
@@ -483,6 +456,7 @@
     }
 
     fournisseurInput.addEventListener('input', filterTable);
+    designationFilter.addEventListener('input', filterTable);
     confirmOrderBtn.addEventListener('click', saveOrder);
     cancelOrderBtn.addEventListener('click', closeModal);
     window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
