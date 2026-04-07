@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Commandes (CADENCIER) - Mobile</title>
+    <title>BOTAKI - Commandes locales (CADENCIER) - Mobile</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -97,10 +97,16 @@
         .clickable-row:active td {
             background: #fef9c3;
         }
+        /* Rouge foncé pour les articles commandés */
         .commanded-row {
-            background-color: #fee2e2 !important;
+            background-color: #b91c1c !important;
+            color: white !important;
         }
-        /* Modal flottant bien visible */
+        .commanded-row td {
+            background-color: #b91c1c !important;
+            color: white !important;
+        }
+        /* Modal flottant */
         .modal {
             display: none;
             position: fixed;
@@ -173,7 +179,7 @@
         .edit-btn {
             background: #f59e0b;
         }
-        .export-btn {
+        .export-btn, .reset-btn {
             background: #10b981;
             color: white;
             border: none;
@@ -182,6 +188,15 @@
             font-weight: 600;
             cursor: pointer;
             font-size: 0.85rem;
+        }
+        .reset-btn {
+            background: #dc2626;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         footer {
             margin-top: 20px;
@@ -229,7 +244,7 @@
             <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>PCB</th><th>Fournisseur</th></tr></thead>
             <tbody id="tableBody"><tr><td colspan="5">Aucune donnée</td></tr></tbody>
         </table>
-        <p style="font-size:0.7rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander. Les articles déjà commandés sont en rouge.</p>
+        <p style="font-size:0.7rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander. Les articles déjà commandés sont en rouge foncé.</p>
     </div>
 
     <!-- Modal flottant pour la commande -->
@@ -248,7 +263,10 @@
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 10px;">
         <h2>📋 Vos commandes</h2>
-        <button id="exportExcelBtn" class="export-btn">📎 Exporter XLSX</button>
+        <div class="button-group">
+            <button id="resetOrdersBtn" class="reset-btn">🗑️ Réinitialiser</button>
+            <button id="exportExcelBtn" class="export-btn">📎 Exporter XLSX</button>
+        </div>
     </div>
     <div class="table-wrapper commandes-table">
         <table id="cartTable">
@@ -281,6 +299,7 @@
     const confirmOrderBtn = document.getElementById('confirmOrderBtn');
     const cancelOrderBtn = document.getElementById('cancelOrderBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const resetOrdersBtn = document.getElementById('resetOrdersBtn');
     const saveStatusDiv = document.getElementById('saveStatus');
 
     function sauvegarderCommandes() {
@@ -412,7 +431,7 @@
     }
 
     function renderCart() {
-        if (orders.length === 0) { cartBody.innerHTML = '<td><td colspan="6">Aucune commande</td></tr>'; return; }
+        if (orders.length === 0) { cartBody.innerHTML = '<tr><td colspan="6">Aucune commande</td></tr>'; return; }
         cartBody.innerHTML = '';
         orders.forEach((order, idx) => {
             const tr = document.createElement('tr');
@@ -430,6 +449,17 @@
             tr.appendChild(tdAction);
             cartBody.appendChild(tr);
         });
+    }
+
+    // Réinitialiser toutes les commandes
+    function resetAllOrders() {
+        if (orders.length === 0) return;
+        if (confirm("Voulez-vous vraiment réinitialiser toutes les commandes ?")) {
+            orders = [];
+            sauvegarderCommandes();
+            renderCart();
+            filterTable(); // enlève le surlignage rouge
+        }
     }
 
     async function exportToExcel() {
@@ -457,6 +487,7 @@
     cancelOrderBtn.addEventListener('click', closeModal);
     window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     exportExcelBtn.addEventListener('click', exportToExcel);
+    resetOrdersBtn.addEventListener('click', resetAllOrders);
     refreshBtn.addEventListener('click', () => chargerBaseExcel());
 
     chargerCommandes();
