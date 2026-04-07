@@ -8,44 +8,203 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
-        body { background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 28px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h1, h2 { color: #1e293b; }
-        .info-area { background: #f8fafc; border-radius: 20px; padding: 16px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .status { font-weight: 500; color: #0f172a; }
-        .refresh-btn { background: #2d4593; color: white; border: none; padding: 6px 16px; border-radius: 40px; cursor: pointer; font-weight: 600; }
-        .filter-area { margin: 20px 0; }
-        label { font-weight: 600; display: block; margin-bottom: 8px; }
-        #fournisseurInput { width: 100%; padding: 12px 16px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 40px; }
-        .table-wrapper { overflow-x: auto; margin-top: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #0f172a; color: white; padding: 12px; text-align: center; }
-        td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; }
-        .clickable-row { cursor: pointer; }
-        .clickable-row:hover td { background: #fef9c3; }
-        /* Style pour les produits déjà commandés (rouge clair) */
+        /* --- STYLE UNIQUE POUR TOUS LES APPAREILS (COMME SUR PC) --- */
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            min-width: 1200px; /* Force la largeur minimale comme sur PC */
+        }
+        .container {
+            max-width: 1400px;
+            min-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #1e293b;
+        }
+        .info-area {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 10px;
+        }
+        .status {
+            font-weight: 500;
+            color: #0f172a;
+        }
+        .refresh-btn {
+            background: #2d4593;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .filter-area {
+            margin: 20px 0;
+        }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+        }
+        #fournisseurInput {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            min-width: 800px; /* Empêche le rétrécissement */
+            border-collapse: collapse;
+        }
+        th {
+            background: #0f172a;
+            color: white;
+            padding: 12px;
+            text-align: center;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .clickable-row {
+            cursor: pointer;
+        }
+        .clickable-row:hover td {
+            background: #fef9c3;
+        }
         .commanded-row {
             background-color: #fee2e2 !important;
         }
         .commanded-row td {
             background-color: #fee2e2 !important;
         }
-        .info, .success { background: #dbeafe; padding: 12px; border-radius: 16px; margin: 16px 0; text-align: center; }
-        .error { background: #fee2e2; color: #b91c1c; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 24px; border-radius: 28px; width: 320px; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
-        .modal-content input { width: 100%; padding: 10px; margin: 15px 0; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; }
-        .modal-content button { padding: 8px 20px; margin: 5px; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; }
-        .btn-add { background: #3b82f6; color: white; }
-        .btn-cancel { background: #e2e8f0; }
-        .commandes-table { margin-top: 30px; }
-        .action-btn { background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 30px; cursor: pointer; font-size: 0.75rem; margin: 0 3px; }
-        .delete-btn { background: #ef4444; }
-        .edit-btn { background: #f59e0b; }
-        .export-btn { background: #10b981; color: white; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-        footer { margin-top: 24px; font-size: 0.75rem; text-align: center; color: #64748b; }
-        .save-status { position: fixed; bottom: 10px; right: 10px; background: #2d4593cc; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; backdrop-filter: blur(4px); pointer-events: none; z-index: 1000; }
+        .info, .success {
+            background: #dbeafe;
+            padding: 12px;
+            border-radius: 16px;
+            margin: 16px 0;
+            text-align: center;
+        }
+        .error {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 28px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+        }
+        .modal-content button {
+            padding: 8px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-add {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-cancel {
+            background: #e2e8f0;
+        }
+        .commandes-table {
+            margin-top: 30px;
+        }
+        .action-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin: 0 3px;
+        }
+        .delete-btn {
+            background: #ef4444;
+        }
+        .edit-btn {
+            background: #f59e0b;
+        }
+        .export-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        footer {
+            margin-top: 24px;
+            font-size: 0.75rem;
+            text-align: center;
+            color: #64748b;
+        }
+        .save-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #2d4593cc;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+        /* Aucune media query pour mobile : l'affichage reste identique */
     </style>
 </head>
 <body>
@@ -138,16 +297,13 @@
             try { orders = JSON.parse(saved); if (!Array.isArray(orders)) orders = []; } catch(e) { orders = []; }
         } else orders = [];
         renderCart();
-        // Mettre à jour le surlignage dans le tableau des produits si déjà chargé
         if (allRows.length) filterTable();
     }
 
-    // ---------- Vérifier si un article a déjà été commandé ----------
     function isArticleCommanded(article) {
         return orders.some(order => order.codeArticle === article.codeArticle && order.fournisseur === article.fournisseur);
     }
 
-    // ---------- Chargement base Excel ----------
     async function chargerBaseExcel() {
         statusMsg.innerHTML = '⏳ Téléchargement de la base CADENCIER...';
         tableContainer.style.display = 'none';
@@ -202,7 +358,6 @@
         }
     }
 
-    // ---------- Filtre + surlignage des produits commandés ----------
     function filterTable() {
         if (!allRows.length) return;
         const term = fournisseurInput.value.trim().toLowerCase();
@@ -215,7 +370,6 @@
         filtered.forEach(article => {
             const tr = document.createElement('tr');
             tr.classList.add('clickable-row');
-            // Ajouter la classe "commanded-row" si l'article a déjà été commandé
             if (isArticleCommanded(article)) {
                 tr.classList.add('commanded-row');
             }
@@ -235,7 +389,6 @@
         return td;
     }
 
-    // ---------- Gestion de la commande ----------
     function openOrderModal(article, editIdx) {
         currentSelectedArticle = article;
         editIndex = editIdx;
@@ -272,7 +425,6 @@
         else orders.push(newOrder);
         renderCart();
         sauvegarderCommandes();
-        // Rafraîchir le tableau des produits pour mettre à jour le surlignage
         filterTable();
         closeModal();
     }
@@ -281,7 +433,7 @@
         orders.splice(index, 1);
         renderCart();
         sauvegarderCommandes();
-        filterTable(); // met à jour le surlignage
+        filterTable();
     }
 
     function editOrder(index) {
@@ -323,7 +475,6 @@
         });
     }
 
-    // ---------- Export Excel ----------
     async function exportToExcel() {
         if (orders.length === 0) { alert("Aucune commande à exporter"); return; }
         const defaultName = `commandes_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`;
@@ -364,7 +515,6 @@
         saveAs(blob, fileName);
     }
 
-    // ---------- Événements ----------
     fournisseurInput.addEventListener('input', filterTable);
     confirmOrderBtn.addEventListener('click', saveOrder);
     cancelOrderBtn.addEventListener('click', closeModal);
@@ -372,7 +522,6 @@
     exportExcelBtn.addEventListener('click', exportToExcel);
     refreshBtn.addEventListener('click', () => { chargerBaseExcel(); });
 
-    // ---------- Initialisation ----------
     chargerCommandes();
     chargerBaseExcel();
 </script>
