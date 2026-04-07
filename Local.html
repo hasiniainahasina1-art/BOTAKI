@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Commandes locales (CADENCIER)</title>
+    <title>BOTAKI - Commandes locales (CADENCIER) - Mobile</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        /* --- STYLE UNIQUE POUR TOUS LES APPAREILS (COMME SUR PC) --- */
         * {
             box-sizing: border-box;
             font-family: system-ui, 'Segoe UI', sans-serif;
@@ -16,208 +15,130 @@
         body {
             background: #f0f2f5;
             margin: 0;
-            padding: 20px;
-            min-width: 1200px; /* Force la largeur minimale comme sur PC */
+            padding: 12px;
         }
         .container {
-            max-width: 1400px;
-            min-width: 1100px;
+            max-width: 100%;
             margin: 0 auto;
             background: white;
-            border-radius: 28px;
-            padding: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 24px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        h1, h2 {
-            color: #1e293b;
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+        h2 {
+            font-size: 1.2rem;
         }
         .info-area {
             background: #f8fafc;
             border-radius: 20px;
-            padding: 16px 20px;
-            margin-bottom: 24px;
+            padding: 12px;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: nowrap;
-            gap: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .status {
-            font-weight: 500;
-            color: #0f172a;
+            font-size: 0.85rem;
         }
         .refresh-btn {
             background: #2d4593;
             color: white;
             border: none;
-            padding: 6px 16px;
+            padding: 6px 12px;
             border-radius: 40px;
-            cursor: pointer;
-            font-weight: 600;
+            font-size: 0.8rem;
         }
         .filter-area {
-            margin: 20px 0;
+            margin: 16px 0;
         }
         label {
             font-weight: 600;
-            display: block;
-            margin-bottom: 8px;
+            font-size: 0.9rem;
         }
         #fournisseurInput {
             width: 100%;
-            padding: 12px 16px;
-            font-size: 1rem;
-            border: 1px solid #cbd5e1;
+            padding: 10px 14px;
+            font-size: 0.9rem;
             border-radius: 40px;
+            border: 1px solid #cbd5e1;
         }
         .table-wrapper {
             overflow-x: auto;
-            margin-top: 20px;
+            margin-top: 16px;
             border-radius: 16px;
             border: 1px solid #e2e8f0;
         }
         table {
             width: 100%;
-            min-width: 800px; /* Empêche le rétrécissement */
+            min-width: 600px; /* Permet un défilement fluide sur mobile */
             border-collapse: collapse;
         }
         th {
             background: #0f172a;
             color: white;
-            padding: 12px;
-            text-align: center;
+            padding: 8px 6px;
+            font-size: 0.75rem;
         }
         td {
-            padding: 10px;
+            padding: 8px 6px;
+            font-size: 0.75rem;
             border-bottom: 1px solid #e2e8f0;
             text-align: center;
         }
         .clickable-row {
             cursor: pointer;
         }
-        .clickable-row:hover td {
+        .clickable-row:active td {
             background: #fef9c3;
         }
         .commanded-row {
             background-color: #fee2e2 !important;
         }
-        .commanded-row td {
-            background-color: #fee2e2 !important;
-        }
-        .info, .success {
-            background: #dbeafe;
-            padding: 12px;
-            border-radius: 16px;
-            margin: 16px 0;
-            text-align: center;
-        }
-        .error {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
         .modal-content {
-            background: white;
-            padding: 24px;
-            border-radius: 28px;
-            width: 320px;
-            text-align: center;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 15px 0;
-            border-radius: 40px;
-            border: 1px solid #cbd5e1;
-            font-size: 1rem;
-        }
-        .modal-content button {
-            padding: 8px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 40px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-add {
-            background: #3b82f6;
-            color: white;
-        }
-        .btn-cancel {
-            background: #e2e8f0;
-        }
-        .commandes-table {
-            margin-top: 30px;
+            width: 90%;
+            max-width: 320px;
         }
         .action-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            margin: 0 3px;
-        }
-        .delete-btn {
-            background: #ef4444;
-        }
-        .edit-btn {
-            background: #f59e0b;
+            padding: 4px 8px;
+            font-size: 0.7rem;
         }
         .export-btn {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
         }
         footer {
-            margin-top: 24px;
-            font-size: 0.75rem;
-            text-align: center;
-            color: #64748b;
+            font-size: 0.65rem;
         }
         .save-status {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: #2d4593cc;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            backdrop-filter: blur(4px);
-            pointer-events: none;
-            z-index: 1000;
+            font-size: 0.65rem;
+            padding: 2px 8px;
         }
-        /* Aucune media query pour mobile : l'affichage reste identique */
+        /* Ajustements pour très petits écrans */
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .container { padding: 12px; }
+            th, td { padding: 6px 4px; font-size: 0.7rem; }
+            .btn-add, .btn-cancel { padding: 6px 12px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>📦 BOTAKI - Commandes locales (CADENCIER)</h1>
+    <h1>📦 BOTAKI - Commandes (CADENCIER)</h1>
 
     <div class="info-area">
-        <div class="status" id="statusMsg">⏳ Chargement de la base de données...</div>
-        <button class="refresh-btn" id="refreshBtn">⟳ Recharger la base</button>
+        <div class="status" id="statusMsg">⏳ Chargement...</div>
+        <button class="refresh-btn" id="refreshBtn">⟳ Recharger</button>
     </div>
 
     <div class="filter-area" id="filterArea" style="display: none;">
-        <label>🏷️ Filtrer par fournisseur :</label>
+        <label>🏷️ Filtrer fournisseur :</label>
         <input type="text" id="fournisseurInput" placeholder="Ex: DUPONT" autocomplete="off">
     </div>
 
@@ -226,15 +147,15 @@
             <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>PCB</th><th>Fournisseur</th></tr></thead>
             <tbody id="tableBody"><tr><td colspan="5">Aucune donnée</td></tr></tbody>
         </table>
-        <p style="font-size:0.8rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander cet article. Les produits déjà commandés apparaissent en rouge.</p>
+        <p style="font-size:0.7rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander. Les articles déjà commandés sont en rouge.</p>
     </div>
 
     <div id="orderModal" class="modal">
         <div class="modal-content">
-            <h3>🛒 Votre commande</h3>
+            <h3>🛒 Commande</h3>
             <p id="modalArticleInfo">Article : </p>
             <p id="modalPCB" style="font-weight:bold;">PCB : </p>
-            <input type="number" id="commandeQty" placeholder="Quantité commandée" min="1" step="1">
+            <input type="number" id="commandeQty" placeholder="Quantité" min="1" step="1">
             <div>
                 <button id="confirmOrderBtn" class="btn-add">Ajouter / Modifier</button>
                 <button id="cancelOrderBtn" class="btn-cancel">Annuler</button>
@@ -242,30 +163,25 @@
         </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 10px;">
         <h2>📋 Vos commandes</h2>
-        <button id="exportExcelBtn" class="export-btn">📎 Exporter en XLSX (sans PCB)</button>
+        <button id="exportExcelBtn" class="export-btn">📎 Exporter XLSX</button>
     </div>
     <div class="table-wrapper commandes-table">
         <table id="cartTable">
-            <thead><tr><th>Code Article</th><th>Désignation</th><th>PCB</th><th>Commande</th><th>Fournisseur</th><th>Actions</th></tr></thead>
-            <tbody id="cartBody"><tr><td colspan="6">Aucune commande ajoutée</td></tr></tbody>
+            <thead><tr><th>Code Art.</th><th>Désignation</th><th>PCB</th><th>Qté</th><th>Fournisseur</th><th>Actions</th></tr></thead>
+            <tbody id="cartBody"><tr><td colspan="6">Aucune commande</td></tr></tbody>
         </table>
     </div>
-    <footer>⚡ Les commandes sont sauvegardées automatiquement. L'export Excel ne contient pas la colonne PCB.</footer>
+    <footer>⚡ Sauvegarde auto • Export sans PCB</footer>
 </div>
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
-    // ================= CONFIGURATION =================
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/CADENCIER.xlsx';
     const STORAGE_KEY_ORDERS = 'BOTAKI_local_orders';
-    // =================================================
 
-    let allRows = [];
-    let orders = [];
-    let editIndex = null;
-    let currentSelectedArticle = null;
+    let allRows = [], orders = [], editIndex = null, currentSelectedArticle = null;
 
     // DOM
     const statusMsg = document.getElementById('statusMsg');
@@ -284,7 +200,6 @@
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const saveStatusDiv = document.getElementById('saveStatus');
 
-    // ---------- Sauvegarde / chargement des commandes ----------
     function sauvegarderCommandes() {
         localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
         saveStatusDiv.style.opacity = '1';
@@ -293,9 +208,8 @@
 
     function chargerCommandes() {
         const saved = localStorage.getItem(STORAGE_KEY_ORDERS);
-        if (saved) {
-            try { orders = JSON.parse(saved); if (!Array.isArray(orders)) orders = []; } catch(e) { orders = []; }
-        } else orders = [];
+        if (saved) try { orders = JSON.parse(saved); if (!Array.isArray(orders)) orders = []; } catch(e) { orders = []; }
+        else orders = [];
         renderCart();
         if (allRows.length) filterTable();
     }
@@ -305,20 +219,20 @@
     }
 
     async function chargerBaseExcel() {
-        statusMsg.innerHTML = '⏳ Téléchargement de la base CADENCIER...';
+        statusMsg.innerHTML = '⏳ Téléchargement...';
         tableContainer.style.display = 'none';
         filterArea.style.display = 'none';
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status} - Fichier introuvable. Vérifiez que le fichier CADENCIER.xlsx est bien présent sur GitHub.`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Fichier Excel vide");
+            if (!rows || rows.length < 2) throw new Error("Fichier vide");
 
             let startRow = 0;
             const firstRow = rows[0];
@@ -339,18 +253,14 @@
                 let fournisseur = (row[4] != null) ? row[4].toString().trim() : "";
                 if (fournisseur === "") fournisseur = lastSupplier;
                 else lastSupplier = fournisseur;
-                if (codeBarre || codeArticle || designation) {
-                    produits.push({ codeBarre, codeArticle, designation, pcb, fournisseur });
-                }
+                if (codeBarre || codeArticle || designation) produits.push({ codeBarre, codeArticle, designation, pcb, fournisseur });
             }
             allRows = produits;
-            if (allRows.length === 0) throw new Error("Aucune donnée exploitable");
-            statusMsg.innerHTML = `✅ Base chargée : ${allRows.length} articles (CADENCIER)`;
+            statusMsg.innerHTML = `✅ ${allRows.length} articles (CADENCIER)`;
             filterArea.style.display = 'block';
             tableContainer.style.display = 'block';
             filterTable();
         } catch (err) {
-            console.error(err);
             statusMsg.innerHTML = `❌ Erreur : ${err.message}`;
             tableContainer.style.display = 'none';
             filterArea.style.display = 'none';
@@ -362,31 +272,20 @@
         if (!allRows.length) return;
         const term = fournisseurInput.value.trim().toLowerCase();
         const filtered = term === "" ? allRows : allRows.filter(r => r.fournisseur.toLowerCase().includes(term));
-        if (filtered.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5">Aucun article pour ce fournisseur</td></tr>';
-            return;
-        }
+        if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="5">Aucun article</td></tr>'; return; }
         tableBody.innerHTML = '';
         filtered.forEach(article => {
             const tr = document.createElement('tr');
             tr.classList.add('clickable-row');
-            if (isArticleCommanded(article)) {
-                tr.classList.add('commanded-row');
-            }
+            if (isArticleCommanded(article)) tr.classList.add('commanded-row');
             tr.addEventListener('click', () => openOrderModal(article, null));
-            tr.appendChild(createCell(article.codeBarre));
-            tr.appendChild(createCell(article.codeArticle));
-            tr.appendChild(createCell(article.designation));
-            tr.appendChild(createCell(article.pcb));
-            tr.appendChild(createCell(article.fournisseur));
+            [article.codeBarre, article.codeArticle, article.designation, article.pcb, article.fournisseur].forEach(val => {
+                const td = document.createElement('td');
+                td.textContent = val || "-";
+                tr.appendChild(td);
+            });
             tableBody.appendChild(tr);
         });
-    }
-
-    function createCell(content) {
-        const td = document.createElement('td');
-        td.textContent = content || "-";
-        return td;
     }
 
     function openOrderModal(article, editIdx) {
@@ -394,21 +293,12 @@
         editIndex = editIdx;
         modalArticleInfo.innerText = `📦 ${article.codeArticle} - ${article.designation}`;
         modalPCB.innerText = `PCB : ${article.pcb || "-"}`;
-        if (editIndex !== null && orders[editIndex]) {
-            commandeQty.value = orders[editIndex].commande;
-            confirmOrderBtn.textContent = "Modifier";
-        } else {
-            commandeQty.value = "1";
-            confirmOrderBtn.textContent = "Ajouter";
-        }
+        commandeQty.value = (editIndex !== null && orders[editIndex]) ? orders[editIndex].commande : "1";
+        confirmOrderBtn.textContent = (editIndex !== null) ? "Modifier" : "Ajouter";
         modal.style.display = "flex";
     }
 
-    function closeModal() {
-        modal.style.display = "none";
-        currentSelectedArticle = null;
-        editIndex = null;
-    }
+    function closeModal() { modal.style.display = "none"; currentSelectedArticle = null; editIndex = null; }
 
     function saveOrder() {
         if (!currentSelectedArticle) return;
@@ -429,61 +319,41 @@
         closeModal();
     }
 
-    function removeOrder(index) {
-        orders.splice(index, 1);
-        renderCart();
-        sauvegarderCommandes();
-        filterTable();
-    }
+    function removeOrder(index) { orders.splice(index, 1); renderCart(); sauvegarderCommandes(); filterTable(); }
 
     function editOrder(index) {
         const order = orders[index];
         const article = allRows.find(a => a.codeArticle === order.codeArticle && a.fournisseur === order.fournisseur);
         if (article) openOrderModal(article, index);
-        else {
-            const fakeArticle = { codeArticle: order.codeArticle, designation: order.designation, pcb: order.pcb, fournisseur: order.fournisseur, codeBarre: "" };
-            openOrderModal(fakeArticle, index);
-        }
+        else openOrderModal({ codeArticle: order.codeArticle, designation: order.designation, pcb: order.pcb, fournisseur: order.fournisseur, codeBarre: "" }, index);
     }
 
     function renderCart() {
-        if (orders.length === 0) {
-            cartBody.innerHTML = '<tr><td colspan="6">Aucune commande ajoutée</td></tr>';
-            return;
-        }
+        if (orders.length === 0) { cartBody.innerHTML = '<tr><td colspan="6">Aucune commande</td></tr>'; return; }
         cartBody.innerHTML = '';
         orders.forEach((order, idx) => {
             const tr = document.createElement('tr');
-            tr.appendChild(createCell(order.codeArticle));
-            tr.appendChild(createCell(order.designation));
-            tr.appendChild(createCell(order.pcb));
-            tr.appendChild(createCell(order.commande));
-            tr.appendChild(createCell(order.fournisseur));
+            [order.codeArticle, order.designation, order.pcb, order.commande, order.fournisseur].forEach(val => {
+                const td = document.createElement('td');
+                td.textContent = val || "-";
+                tr.appendChild(td);
+            });
             const tdAction = document.createElement('td');
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Modifier';
-            editBtn.className = 'action-btn edit-btn';
+            const editBtn = document.createElement('button'); editBtn.textContent = 'Modifier'; editBtn.className = 'action-btn edit-btn';
             editBtn.onclick = (e) => { e.stopPropagation(); editOrder(idx); };
-            const delBtn = document.createElement('button');
-            delBtn.textContent = 'Supprimer';
-            delBtn.className = 'action-btn delete-btn';
+            const delBtn = document.createElement('button'); delBtn.textContent = 'Supprimer'; delBtn.className = 'action-btn delete-btn';
             delBtn.onclick = (e) => { e.stopPropagation(); removeOrder(idx); };
-            tdAction.appendChild(editBtn);
-            tdAction.appendChild(delBtn);
+            tdAction.appendChild(editBtn); tdAction.appendChild(delBtn);
             tr.appendChild(tdAction);
             cartBody.appendChild(tr);
         });
     }
 
     async function exportToExcel() {
-        if (orders.length === 0) { alert("Aucune commande à exporter"); return; }
-        const defaultName = `commandes_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`;
-        let fileName = prompt("Nom du fichier (sans extension) :", defaultName);
-        if (fileName === null) return;
-        if (fileName.trim() === "") fileName = defaultName;
-        fileName = fileName.replace(/[\\/*?:"<>|]/g, '');
-        if (!fileName.endsWith('.xlsx')) fileName += '.xlsx';
-
+        if (orders.length === 0) { alert("Aucune commande"); return; }
+        let fileName = prompt("Nom du fichier (sans extension)", `commandes_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`);
+        if (!fileName) return;
+        fileName = fileName.replace(/[\\/*?:"<>|]/g, '') + '.xlsx';
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Commandes');
         worksheet.columns = [
@@ -492,27 +362,11 @@
             { header: 'Commande', key: 'commande', width: 12 },
             { header: 'Fournisseur', key: 'fournisseur', width: 20 }
         ];
-        const headerRow = worksheet.getRow(1);
-        headerRow.eachCell(cell => {
-            cell.font = { bold: true };
-            cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        });
-        orders.forEach(order => {
-            worksheet.addRow({
-                codeArticle: order.codeArticle,
-                designation: order.designation,
-                commande: order.commande,
-                fournisseur: order.fournisseur
-            });
-        });
-        worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 1) {
-                row.eachCell(cell => { cell.alignment = { horizontal: 'center', vertical: 'middle' }; });
-            }
-        });
+        worksheet.getRow(1).eachCell(cell => { cell.font = { bold: true }; cell.alignment = { horizontal: 'center' }; });
+        orders.forEach(order => worksheet.addRow({ codeArticle: order.codeArticle, designation: order.designation, commande: order.commande, fournisseur: order.fournisseur }));
+        worksheet.eachRow((row, i) => { if (i > 1) row.eachCell(cell => cell.alignment = { horizontal: 'center' }); });
         const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        saveAs(blob, fileName);
+        saveAs(new Blob([buffer]), fileName);
     }
 
     fournisseurInput.addEventListener('input', filterTable);
@@ -520,7 +374,7 @@
     cancelOrderBtn.addEventListener('click', closeModal);
     window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     exportExcelBtn.addEventListener('click', exportToExcel);
-    refreshBtn.addEventListener('click', () => { chargerBaseExcel(); });
+    refreshBtn.addEventListener('click', () => chargerBaseExcel());
 
     chargerCommandes();
     chargerBaseExcel();
