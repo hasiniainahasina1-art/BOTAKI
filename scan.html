@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Scanner BOTAKI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner BOTAKI - Simple</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{
@@ -123,7 +123,7 @@ async function onScanSuccess(text) {
     }
 
     localStorage.setItem('scannedCode', text);
-    window.location.href = 'Dlv.html';
+    setTimeout(() => { window.close(); }, 800);
 }
 
 document.getElementById("flashBtn").onclick = async () => {
