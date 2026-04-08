@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Scan intégré)</title>
+    <title>BOTAKI - Dlv & Prix (Corrigé)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
+        /* (garde le même style que précédemment) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(145deg, #b8e1fc 0%, #e0f2fe 100%);
@@ -138,6 +139,14 @@
             margin-top: 5px;
             color: #1e6f9f;
         }
+        .error-message {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 10px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
         @media (max-width: 550px) {
             .row-dlv { flex-wrap: wrap; }
             .row-qte-prix { flex-wrap: wrap; }
@@ -194,7 +203,13 @@
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
+    // ========== CONFIGURATION ==========
+    // ⚠️ VÉRIFIEZ QUE CETTE URL EST CORRECTE ET QUE LE FICHIER EXISTE
     const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
+    // Si vous utilisez CADENCIER.xlsx, décommentez la ligne suivante et commentez l'autre :
+    // const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/CADENCIER.xlsx';
+    // ====================================
+
     const COL_CODE_BARRE = 0;
     const COL_CODE_ARTICLE = 1;
     const COL_DESIGNATION = 2;
@@ -271,10 +286,10 @@
                 <td>${escapeHtml(l.designation)}</td>
                 <td>${escapeHtml(dateFormatee)}</td>
                 <td>${l.quantite}</td>
-                <td>${l.prix.toFixed(0)} Ar</div>
-                <td>${totalLigne.toFixed(0)} Ar</div>
+                <td>${l.prix.toFixed(0)} Ar</td>
+                <td>${totalLigne.toFixed(0)} Ar</td>
                 <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-            </table>`;
+            </tr>`;
         });
         tableBody.innerHTML = html;
         document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -289,18 +304,19 @@
 
     // ---------- Chargement base de données ----------
     async function chargerBase() {
-        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</div></div>';
+        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement de la base de données...</td></tr>';
         try {
+            console.log("Tentative de chargement :", EXCEL_URL);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
             clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            if (!rows || rows.length < 2) throw new Error("Fichier vide");
+            if (!rows || rows.length < 2) throw new Error("Le fichier Excel est vide");
 
             let startRow = 0;
             const firstRow = rows[0];
@@ -321,11 +337,12 @@
             }
             produitsDB = produits;
             baseChargee = true;
-            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</div></div>';
+            console.log(`Base chargée : ${produitsDB.length} produits`);
+            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             else renderTable();
         } catch (err) {
-            console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</div></div>`;
+            console.error("Erreur chargement base :", err);
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2; color:#b91c1c;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et que le fichier Excel existe (${EXCEL_URL})</td></tr>`;
             baseChargee = false;
         }
     }
@@ -435,11 +452,9 @@
         if (fileName.trim() === "") fileName = defaultName;
         fileName = fileName.replace(/[\\/*?:"<>|]/g, '') + '.xlsx';
 
-        // Trier les lignes par Dlv croissant
         const lignesTriees = [...lignes];
         lignesTriees.sort((a, b) => dateVersTimestamp(a.dlv) - dateVersTimestamp(b.dlv));
 
-        // Création du fichier Excel
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Export_Dlv');
         worksheet.columns = [
@@ -474,7 +489,6 @@
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, fileName);
 
-        // Réinitialisation après export
         lignes = [];
         sauvegarderLignes();
         renderTable();
@@ -482,4 +496,34 @@
     }
 
     // ---------- Scanner : double-clic et écoute storage ----------
-    codeInput.addEventListe
+    codeInput.addEventListener('dblclick', () => {
+        window.location.href = 'scan.html';
+    });
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'scannedCode') {
+            const scanned = e.newValue;
+            if (scanned) {
+                codeInput.value = scanned;
+                const inputEvent = new Event('input', { bubbles: true });
+                codeInput.dispatchEvent(inputEvent);
+                localStorage.removeItem('scannedCode');
+                dlvInput.focus();
+            }
+        }
+    });
+
+    // ---------- Événements ----------
+    codeInput.addEventListener('input', mettreAJourDesignation);
+    codeInput.addEventListener('blur', mettreAJourDesignation);
+    addBtn.onclick = ajouterDepuisBase;
+    nonBaseBtn.onclick = ajouterHorsBase;
+    exportBtn.onclick = exporterEtReinitialiser;
+
+    // ---------- Initialisation ----------
+    chargerLignesSauvegardees();
+    if (lignes.length > 0) renderTable();
+    chargerBase();
+</script>
+</body>
+</html>
