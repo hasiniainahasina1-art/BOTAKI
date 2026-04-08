@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scanner BOTAKI - Scan & retour</title>
+<title>Scanner BOTAKI - Fermeture auto</title>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
@@ -115,7 +115,7 @@ button{
         <button class="success" id="exportBtn">📤 Export</button>
         <button class="primary" id="copyBtn">📋 Copier</button>
         <button class="danger" id="clearBtn">🗑️ Clear</button>
-        <button onclick="history.back()">⬅️ Retour</button>
+        <button onclick="window.close()">⬅️ Fermer</button>
     </div>
 </div>
 
@@ -130,7 +130,7 @@ button{
 </div>
 
 <div class="helper">
-    🔁 Après un scan réussi, retournez à l'onglet BOTAKI – le code sera automatiquement saisi.
+    🔍 Scannez un code → la fenêtre se ferme automatiquement et le code est transféré à BOTAKI.
 </div>
 
 </div>
@@ -191,7 +191,7 @@ async function startScanner(){
     }
 }
 
-// ✅ scan réussi + stop + envoi vers localStorage
+// ✅ scan réussi + stop + stockage + fermeture auto
 async function onScanSuccess(text){
     if(text===lastScan) return;
     lastScan=text;
@@ -217,7 +217,11 @@ async function onScanSuccess(text){
     // ✅ Stocker le code pour l'envoyer à Dlv.html
     localStorage.setItem('scannedCode', text);
 
-    statusEl.innerHTML = "✅ Scan réussi ! Vous pouvez retourner à l'onglet BOTAKI.<br>Le code a été automatiquement transféré.";
+    // Afficher un message puis fermer la fenêtre après 1 seconde
+    statusEl.innerHTML = "✅ Scan réussi ! Fermeture automatique...";
+    setTimeout(() => {
+        window.close();
+    }, 1000);
 }
 
 // ⚡ flash
