@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Export + Réinitialisation)</title>
+    <title>BOTAKI - Dlv & Prix (Scan intégré)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -30,8 +30,19 @@
         .row-dlv .field-group { width: 120px; flex-shrink: 0; }
         .row-qte-prix { display: flex; flex-wrap: nowrap; gap: 1rem; align-items: flex-end; }
         .row-qte-prix .field-group { flex: 1; }
-        .designation-text { font-size: 0.75rem; font-weight: 500; color: #0b3b5f; white-space: nowrap; overflow-x: auto; }
-        label { font-weight: 700; font-size: 0.7rem; text-transform: uppercase; color: #0b3b5f; }
+        .designation-text {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #0b3b5f;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+        label {
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #0b3b5f;
+        }
         input {
             padding: 0.5rem 0.6rem;
             border-radius: 20px;
@@ -41,7 +52,11 @@
             width: 100%;
         }
         .small-input { max-width: 140px; }
-        input:focus { outline: none; border-color: #1e6f9f; box-shadow: 0 0 0 2px rgba(30,111,159,0.2); }
+        input:focus {
+            outline: none;
+            border-color: #1e6f9f;
+            box-shadow: 0 0 0 2px rgba(30,111,159,0.2);
+        }
         .btn-row {
             display: flex;
             flex-wrap: wrap;
@@ -65,16 +80,64 @@
         .btn-ajouter:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
         .btn-nonbase { background: white; color: #b91c1c; border: 2px solid #ef4444; }
         .btn-exporter { background: #0b3b5f; color: white; }
-        .table-wrapper { overflow-x: auto; border-radius: 20px; border: 1px solid #facc15; background: white; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-        th { background: #fef9e6; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 2px solid #facc15; }
-        td { padding: 0.5rem; border-bottom: 1px solid #fef3c7; }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #facc15;
+            background: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        th {
+            background: #fef9e6;
+            padding: 0.6rem 0.5rem;
+            text-align: left;
+            border-bottom: 2px solid #facc15;
+        }
+        td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #fef3c7;
+        }
         tr.ligne-hors-base { background-color: #fee2e2 !important; }
-        .delete-btn { background: #dc2626; color: white; padding: 0.2rem 0.6rem; border-radius: 30px; font-size: 0.7rem; border: none; cursor: pointer; }
-        footer { text-align: center; margin-top: 1rem; font-size: 0.65rem; color: #2c5a7a; }
+        .delete-btn {
+            background: #dc2626;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            border: none;
+            cursor: pointer;
+        }
+        footer {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.65rem;
+            color: #2c5a7a;
+        }
         .valid { border-color: #10b981 !important; background-color: #f0fdf4; }
         .invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
-        .save-status { position: fixed; bottom: 10px; right: 10px; background: #2d4593cc; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; backdrop-filter: blur(4px); pointer-events: none; z-index: 1000; }
+        .save-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #2d4593cc;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .info-scan {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 5px;
+            color: #1e6f9f;
+        }
         @media (max-width: 550px) {
             .row-dlv { flex-wrap: wrap; }
             .row-qte-prix { flex-wrap: wrap; }
@@ -89,7 +152,8 @@
         <div class="form-vertical">
             <div class="field-group">
                 <label>🔍 Code barre / article *</label>
-                <input type="text" id="codeInput" placeholder="Scanner ou taper" autocomplete="off">
+                <input type="text" id="codeInput" placeholder="Scanner ou taper (double-clic pour scanner)" autocomplete="off">
+                <div class="info-scan">💡 Double-clic ici pour ouvrir le scanner</div>
             </div>
             <div class="row-dlv">
                 <div class="field-group">
@@ -125,7 +189,7 @@
             </table>
         </div>
     </div>
-    <footer>✅ Lignes rouges = hors base • Sauvegarde auto • Export + Réinitialisation automatique</footer>
+    <footer>✅ Lignes rouges = hors base • Sauvegarde auto • Export + réinitialisation automatique</footer>
 </div>
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
@@ -141,6 +205,7 @@
     let dernierProduitValide = null;
     let baseChargee = false;
 
+    // DOM elements
     const codeInput = document.getElementById('codeInput');
     const dlvInput = document.getElementById('dlv');
     const designationText = document.getElementById('designationText');
@@ -152,6 +217,7 @@
     const tableBody = document.getElementById('tableBody');
     const saveStatus = document.getElementById('saveStatus');
 
+    // ---------- Sauvegarde / chargement local ----------
     function sauvegarderLignes() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lignes));
         saveStatus.style.opacity = '1';
@@ -165,6 +231,7 @@
         } else lignes = [];
     }
 
+    // ---------- Utilitaires ----------
     function normaliserCode(code) {
         if (!code) return "";
         return code.toString().replace(/[\s\.\-]/g, '');
@@ -220,6 +287,7 @@
         });
     }
 
+    // ---------- Chargement base de données ----------
     async function chargerBase() {
         tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
         try {
@@ -262,6 +330,7 @@
         }
     }
 
+    // ---------- Recherche et validation ----------
     function rechercherProduit(identifiant) {
         if (!identifiant.trim() || !baseChargee) return null;
         const idNormalise = normaliserCode(identifiant.trim());
@@ -309,6 +378,7 @@
         codeInput.classList.remove("valid", "invalid");
     }
 
+    // ---------- Ajout de lignes ----------
     function ajouterDepuisBase() {
         if (!dernierProduitValide) { alert("Code invalide ou non trouvé."); return; }
         const dlv = dlvInput.value;
@@ -353,7 +423,7 @@
         resetTousLesChamps();
     }
 
-    // Nouvelle fonction d'export + réinitialisation
+    // ---------- Export Excel + réinitialisation ----------
     async function exporterEtReinitialiser() {
         if (lignes.length === 0) {
             alert("Aucune donnée à exporter.");
@@ -365,11 +435,11 @@
         if (fileName.trim() === "") fileName = defaultName;
         fileName = fileName.replace(/[\\/*?:"<>|]/g, '') + '.xlsx';
 
-        // 1. Trier les lignes
+        // Trier les lignes par Dlv croissant
         const lignesTriees = [...lignes];
         lignesTriees.sort((a, b) => dateVersTimestamp(a.dlv) - dateVersTimestamp(b.dlv));
 
-        // 2. Générer le fichier Excel
+        // Création du fichier Excel
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Export_Dlv');
         worksheet.columns = [
@@ -404,20 +474,44 @@
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, fileName);
 
-        // 3. Réinitialiser les lignes après l'export
+        // Réinitialisation après export
         lignes = [];
         sauvegarderLignes();
         renderTable();
-        // Optionnel : message de confirmation
         alert("Export terminé. Les lignes ont été réinitialisées.");
     }
 
+    // ---------- Scanner : double-clic et écoute storage ----------
+    codeInput.addEventListener('dblclick', () => {
+        // Ouvre scan.html dans un nouvel onglet (ou une nouvelle fenêtre)
+        window.open('scan.html', '_blank');
+    });
+
+    // Réception du code scanné via localStorage
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'scannedCode') {
+            const scanned = e.newValue;
+            if (scanned) {
+                codeInput.value = scanned;
+                // Déclencher la recherche (mise à jour de la désignation)
+                const inputEvent = new Event('input', { bubbles: true });
+                codeInput.dispatchEvent(inputEvent);
+                // Nettoyer pour éviter une réutilisation
+                localStorage.removeItem('scannedCode');
+                // Option : focus sur le champ suivant ou notifier
+                dlvInput.focus();
+            }
+        }
+    });
+
+    // ---------- Événements ----------
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
     nonBaseBtn.onclick = ajouterHorsBase;
     exportBtn.onclick = exporterEtReinitialiser;
 
+    // ---------- Initialisation ----------
     chargerLignesSauvegardees();
     if (lignes.length > 0) renderTable();
     chargerBase();
