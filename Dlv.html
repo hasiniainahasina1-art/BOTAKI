@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix (Sauvegarde auto + nom personnalisé)</title>
+    <title>BOTAKI - Dlv & Prix (Export + Réinitialisation)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -26,33 +26,12 @@
         }
         .form-vertical { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.2rem; }
         .field-group { display: flex; flex-direction: column; gap: 0.2rem; }
-        .row-dlv {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0.8rem;
-        }
+        .row-dlv { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.8rem; }
         .row-dlv .field-group { width: 120px; flex-shrink: 0; }
-        .row-qte-prix {
-            display: flex;
-            flex-wrap: nowrap;
-            gap: 1rem;
-            align-items: flex-end;
-        }
+        .row-qte-prix { display: flex; flex-wrap: nowrap; gap: 1rem; align-items: flex-end; }
         .row-qte-prix .field-group { flex: 1; }
-        .designation-text {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #0b3b5f;
-            white-space: nowrap;
-            overflow-x: auto;
-        }
-        label {
-            font-weight: 700;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: #0b3b5f;
-        }
+        .designation-text { font-size: 0.75rem; font-weight: 500; color: #0b3b5f; white-space: nowrap; overflow-x: auto; }
+        label { font-weight: 700; font-size: 0.7rem; text-transform: uppercase; color: #0b3b5f; }
         input {
             padding: 0.5rem 0.6rem;
             border-radius: 20px;
@@ -62,14 +41,10 @@
             width: 100%;
         }
         .small-input { max-width: 140px; }
-        input:focus {
-            outline: none;
-            border-color: #1e6f9f;
-            box-shadow: 0 0 0 2px rgba(30,111,159,0.2);
-        }
+        input:focus { outline: none; border-color: #1e6f9f; box-shadow: 0 0 0 2px rgba(30,111,159,0.2); }
         .btn-row {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             justify-content: flex-start;
             gap: 1rem;
             margin-top: 0.5rem;
@@ -90,58 +65,16 @@
         .btn-ajouter:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
         .btn-nonbase { background: white; color: #b91c1c; border: 2px solid #ef4444; }
         .btn-exporter { background: #0b3b5f; color: white; }
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 20px;
-            border: 1px solid #facc15;
-            background: white;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-        }
-        th {
-            background: #fef9e6;
-            padding: 0.6rem 0.5rem;
-            text-align: left;
-            border-bottom: 2px solid #facc15;
-        }
-        td {
-            padding: 0.5rem;
-            border-bottom: 1px solid #fef3c7;
-        }
+        .table-wrapper { overflow-x: auto; border-radius: 20px; border: 1px solid #facc15; background: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        th { background: #fef9e6; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 2px solid #facc15; }
+        td { padding: 0.5rem; border-bottom: 1px solid #fef3c7; }
         tr.ligne-hors-base { background-color: #fee2e2 !important; }
-        .delete-btn {
-            background: #dc2626;
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 30px;
-            font-size: 0.7rem;
-            border: none;
-            cursor: pointer;
-        }
-        footer {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.65rem;
-            color: #2c5a7a;
-        }
+        .delete-btn { background: #dc2626; color: white; padding: 0.2rem 0.6rem; border-radius: 30px; font-size: 0.7rem; border: none; cursor: pointer; }
+        footer { text-align: center; margin-top: 1rem; font-size: 0.65rem; color: #2c5a7a; }
         .valid { border-color: #10b981 !important; background-color: #f0fdf4; }
         .invalid { border-color: #dc2626 !important; background-color: #fef2f2; }
-        .save-status {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: #2d4593cc;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            backdrop-filter: blur(4px);
-            pointer-events: none;
-            z-index: 1000;
-        }
+        .save-status { position: fixed; bottom: 10px; right: 10px; background: #2d4593cc; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; backdrop-filter: blur(4px); pointer-events: none; z-index: 1000; }
         @media (max-width: 550px) {
             .row-dlv { flex-wrap: wrap; }
             .row-qte-prix { flex-wrap: wrap; }
@@ -187,16 +120,12 @@
     <div class="card" style="padding: 0.8rem;">
         <div class="table-wrapper">
             <table id="dataTable">
-                <thead>
-                    <tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (jj/mm/aaaa)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="8">Chargement...</td></tr>
-                </tbody>
+                <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>Dlv (jj/mm/aaaa)</th><th>Qté</th><th>Prix unit. (Ar)</th><th>Total (Ar)</th><th>Action</th></tr></thead>
+                <tbody id="tableBody"><tr><td colspan="8">Chargement de la base...</td></tr></tbody>
             </table>
         </div>
     </div>
-    <footer>✅ Sauvegarde automatique • Export Excel trié (croissant) • Nom personnalisable</footer>
+    <footer>✅ Lignes rouges = hors base • Sauvegarde auto • Export + Réinitialisation automatique</footer>
 </div>
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
@@ -205,14 +134,13 @@
     const COL_CODE_BARRE = 0;
     const COL_CODE_ARTICLE = 1;
     const COL_DESIGNATION = 2;
-    const STORAGE_KEY = 'BOTAKI_lignes';
+    const STORAGE_KEY = 'BOTAKI_dlv_lignes';
 
     let produitsDB = [];
     let lignes = [];
     let dernierProduitValide = null;
     let baseChargee = false;
 
-    // DOM
     const codeInput = document.getElementById('codeInput');
     const dlvInput = document.getElementById('dlv');
     const designationText = document.getElementById('designationText');
@@ -224,7 +152,6 @@
     const tableBody = document.getElementById('tableBody');
     const saveStatus = document.getElementById('saveStatus');
 
-    // ---------- Sauvegarde & chargement ----------
     function sauvegarderLignes() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lignes));
         saveStatus.style.opacity = '1';
@@ -234,16 +161,10 @@
     function chargerLignesSauvegardees() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-            try {
-                lignes = JSON.parse(saved);
-                if (!Array.isArray(lignes)) lignes = [];
-            } catch(e) { lignes = []; }
-        } else {
-            lignes = [];
-        }
+            try { lignes = JSON.parse(saved); if (!Array.isArray(lignes)) lignes = []; } catch(e) { lignes = []; }
+        } else lignes = [];
     }
 
-    // ---------- Utilitaires ----------
     function normaliserCode(code) {
         if (!code) return "";
         return code.toString().replace(/[\s\.\-]/g, '');
@@ -252,14 +173,12 @@
     function formaterDateFr(dateStr) {
         if (!dateStr) return "";
         const [annee, mois, jour] = dateStr.split('-');
-        if (!annee || !mois || !jour) return dateStr;
-        return `${jour.padStart(2,'0')}/${mois.padStart(2,'0')}/${annee}`;
+        return `${jour}/${mois}/${annee}`;
     }
 
     function dateVersTimestamp(dateStr) {
         if (!dateStr) return -Infinity;
         const [annee, mois, jour] = dateStr.split('-');
-        if (!annee || !mois || !jour) return -Infinity;
         const date = new Date(parseInt(annee), parseInt(mois)-1, parseInt(jour));
         return isNaN(date.getTime()) ? -Infinity : date.getTime();
     }
@@ -271,7 +190,7 @@
 
     function renderTable() {
         if (lignes.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée. Vous pouvez en ajouter.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne enregistrée. Vous pouvez ajouter.</td></tr>';
             return;
         }
         let html = "";
@@ -294,18 +213,15 @@
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.getAttribute('data-index'), 10);
-                supprimerLigne(index);
+                lignes.splice(index, 1);
+                renderTable();
+                sauvegarderLignes();
             });
         });
     }
 
-    // ---------- Chargement base Excel ----------
     async function chargerBase() {
-        if (lignes.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement de la base...</td></tr>';
-        } else {
-            renderTable();
-        }
+        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -337,14 +253,11 @@
             }
             produitsDB = produits;
             baseChargee = true;
-            console.log(`Base chargée : ${produitsDB.length} produits`);
             if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             else renderTable();
         } catch (err) {
             console.error(err);
-            if (lignes.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
-            }
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
             baseChargee = false;
         }
     }
@@ -440,37 +353,25 @@
         resetTousLesChamps();
     }
 
-    function supprimerLigne(index) {
-        lignes.splice(index, 1);
-        renderTable();
-        sauvegarderLignes();
-    }
-
-    // ---------- Export Excel avec nom personnalisé ----------
-    async function exporterExcel() {
-        if (lignes.length === 0) { alert("Aucune donnée à exporter."); return; }
-
-        // Demander le nom du fichier
-        const dateStr = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-        const defaultName = `export_BOTAKI_${dateStr}`;
+    // Nouvelle fonction d'export + réinitialisation
+    async function exporterEtReinitialiser() {
+        if (lignes.length === 0) {
+            alert("Aucune donnée à exporter.");
+            return;
+        }
+        const defaultName = `export_dlv_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}`;
         let fileName = prompt("Nom du fichier (sans extension) :", defaultName);
-        if (fileName === null) return; // annulation
+        if (fileName === null) return;
         if (fileName.trim() === "") fileName = defaultName;
-        // Nettoyer le nom (enlever les caractères interdits)
-        fileName = fileName.replace(/[\\/*?:"<>|]/g, '');
-        if (!fileName.endsWith('.xlsx')) fileName += '.xlsx';
+        fileName = fileName.replace(/[\\/*?:"<>|]/g, '') + '.xlsx';
 
-        // Trier les lignes par date croissante
+        // 1. Trier les lignes
         const lignesTriees = [...lignes];
-        lignesTriees.sort((a, b) => {
-            const tsA = dateVersTimestamp(a.dlv);
-            const tsB = dateVersTimestamp(b.dlv);
-            return tsA - tsB;
-        });
+        lignesTriees.sort((a, b) => dateVersTimestamp(a.dlv) - dateVersTimestamp(b.dlv));
 
+        // 2. Générer le fichier Excel
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Export_BOTAKI');
-
+        const worksheet = workbook.addWorksheet('Export_Dlv');
         worksheet.columns = [
             { header: 'Code barre', key: 'codeBarre', width: 18 },
             { header: 'Code article', key: 'codeArticle', width: 18 },
@@ -479,15 +380,12 @@
             { header: 'Quantité', key: 'quantite', width: 12 },
             { header: 'Prix (Ar)', key: 'prix', width: 16 }
         ];
-
-        const headerStyle = {
-            font: { bold: true, color: { argb: 'FF0b3b5f' } },
-            alignment: { horizontal: 'center', vertical: 'middle' },
-            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } }
-        };
         const headerRow = worksheet.getRow(1);
-        headerRow.eachCell(cell => { cell.style = headerStyle; });
-
+        headerRow.eachCell(cell => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0f172a' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
         for (const l of lignesTriees) {
             const row = worksheet.addRow({
                 codeBarre: l.codeBarre || "",
@@ -501,29 +399,28 @@
             const prixCell = row.getCell(6);
             prixCell.numFmt = '# ##0 "Ar"';
         }
-
         worksheet.eachRow(row => { row.height = 20; });
-
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, fileName);
+
+        // 3. Réinitialiser les lignes après l'export
+        lignes = [];
+        sauvegarderLignes();
+        renderTable();
+        // Optionnel : message de confirmation
+        alert("Export terminé. Les lignes ont été réinitialisées.");
     }
 
-    // ---------- Initialisation ----------
-    function init() {
-        chargerLignesSauvegardees();
-        if (lignes.length > 0) renderTable();
-        chargerBase();
-    }
-
-    // Événements
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
     nonBaseBtn.onclick = ajouterHorsBase;
-    exportBtn.onclick = exporterExcel;
+    exportBtn.onclick = exporterEtReinitialiser;
 
-    init();
+    chargerLignesSauvegardees();
+    if (lignes.length > 0) renderTable();
+    chargerBase();
 </script>
 </body>
 </html>
