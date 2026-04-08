@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scanner BOTAKI - Fermeture auto</title>
+<title>Scanner BOTAKI - Auto Scan</title>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
@@ -107,10 +107,10 @@ button{
 
 <div class="card">
     <div id="reader"></div>
-    <div id="status" class="status">⏳ Prêt à scanner</div>
+    <div id="status" class="status">⏳ Démarrage du scanner...</div>
 
     <div class="buttons">
-        <button class="primary" id="startBtn">📷 Scanner</button>
+        <!-- Le bouton "Scanner" a été supprimé -->
         <button class="yellow" id="flashBtn">⚡ Flash</button>
         <button class="success" id="exportBtn">📤 Export</button>
         <button class="primary" id="copyBtn">📋 Copier</button>
@@ -165,7 +165,7 @@ function updateHistory(){
 }
 updateHistory();
 
-// 🚀 démarrer scan
+// 🚀 démarrage automatique du scan
 async function startScanner(){
     try{
         if(!html5QrCode){
@@ -183,10 +183,10 @@ async function startScanner(){
         );
 
         isScanning=true;
-        statusEl.innerHTML="📸 Scanner actif";
+        statusEl.innerHTML="📸 Scanner actif - pointez vers un code-barre";
 
     }catch(err){
-        statusEl.innerHTML="❌ Erreur caméra";
+        statusEl.innerHTML="❌ Erreur caméra. Vérifiez les autorisations.";
         console.error(err);
     }
 }
@@ -236,11 +236,6 @@ document.getElementById("flashBtn").onclick = async ()=>{
     }
 };
 
-// 📷 bouton scanner (manuel)
-document.getElementById("startBtn").onclick = ()=>{
-    startScanner();
-};
-
 // 📋 copier
 document.getElementById("copyBtn").onclick=()=>{
     if(!lastScan) return;
@@ -266,6 +261,9 @@ document.getElementById("exportBtn").onclick=()=>{
     a.download="scans.csv";
     a.click();
 };
+
+// 🔁 Lancement automatique au chargement de la page
+startScanner();
 </script>
 
 </body>
