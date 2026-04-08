@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix</title>
+    <title>BOTAKI - Dlv & Prix (Scan intégré)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -205,6 +205,7 @@
     let dernierProduitValide = null;
     let baseChargee = false;
 
+    // DOM elements
     const codeInput = document.getElementById('codeInput');
     const dlvInput = document.getElementById('dlv');
     const designationText = document.getElementById('designationText');
@@ -216,6 +217,7 @@
     const tableBody = document.getElementById('tableBody');
     const saveStatus = document.getElementById('saveStatus');
 
+    // ---------- Sauvegarde / chargement local ----------
     function sauvegarderLignes() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(lignes));
         saveStatus.style.opacity = '1';
@@ -229,6 +231,7 @@
         } else lignes = [];
     }
 
+    // ---------- Utilitaires ----------
     function normaliserCode(code) {
         if (!code) return "";
         return code.toString().replace(/[\s\.\-]/g, '');
@@ -265,13 +268,13 @@
             html += `<tr ${rowClass}>
                 <td>${escapeHtml(l.codeBarre) || "—"}</td>
                 <td>${escapeHtml(l.codeArticle) || "—"}</td>
-                <td>${escapeHtml(l.designation)}</div>
-                <td>${escapeHtml(dateFormatee)}</div>
-                <td>${l.quantite}</div>
-                <td>${l.prix.toFixed(0)} Ar</div>
-                <td>${totalLigne.toFixed(0)} Ar</div>
-                <td><button class="delete-btn" data-index="${idx}">🗑️</button></div>
-            </table>`;
+                <td>${escapeHtml(l.designation)}</td>
+                <td>${escapeHtml(dateFormatee)}</td>
+                <td>${l.quantite}</td>
+                <td>${l.prix.toFixed(0)} Ar</td>
+                <td>${totalLigne.toFixed(0)} Ar</td>
+                <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
+            </tr>`;
         });
         tableBody.innerHTML = html;
         document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -284,8 +287,9 @@
         });
     }
 
+    // ---------- Chargement base de données ----------
     async function chargerBase() {
-        tableBody.innerHTML = '<td><td colspan="8">⏳ Téléchargement...</div></div>';
+        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -317,15 +321,16 @@
             }
             produitsDB = produits;
             baseChargee = true;
-            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</div></div>';
+            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
             else renderTable();
         } catch (err) {
             console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</div></div>`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
             baseChargee = false;
         }
     }
 
+    // ---------- Recherche et validation ----------
     function rechercherProduit(identifiant) {
         if (!identifiant.trim() || !baseChargee) return null;
         const idNormalise = normaliserCode(identifiant.trim());
@@ -373,6 +378,7 @@
         codeInput.classList.remove("valid", "invalid");
     }
 
+    // ---------- Ajout de lignes ----------
     function ajouterDepuisBase() {
         if (!dernierProduitValide) { alert("Code invalide ou non trouvé."); return; }
         const dlv = dlvInput.value;
@@ -417,6 +423,7 @@
         resetTousLesChamps();
     }
 
+    // ---------- Export Excel + réinitialisation ----------
     async function exporterEtReinitialiser() {
         if (lignes.length === 0) {
             alert("Aucune donnée à exporter.");
@@ -428,9 +435,11 @@
         if (fileName.trim() === "") fileName = defaultName;
         fileName = fileName.replace(/[\\/*?:"<>|]/g, '') + '.xlsx';
 
+        // Trier les lignes par Dlv croissant
         const lignesTriees = [...lignes];
         lignesTriees.sort((a, b) => dateVersTimestamp(a.dlv) - dateVersTimestamp(b.dlv));
 
+        // Création du fichier Excel
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Export_Dlv');
         worksheet.columns = [
@@ -465,34 +474,44 @@
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, fileName);
 
+        // Réinitialisation après export
         lignes = [];
         sauvegarderLignes();
         renderTable();
         alert("Export terminé. Les lignes ont été réinitialisées.");
     }
 
-    // --- Gestion du scanner ---
+    // ---------- Scanner : double-clic et écoute storage ----------
     codeInput.addEventListener('dblclick', () => {
-        window.location.href = 'scan.html';
+        // Ouvre scan.html dans un nouvel onglet (ou une nouvelle fenêtre)
+        window.open('scan.html', '_blank');
     });
 
-    // Au chargement, vérifier si un code a été scanné
-    const scanned = localStorage.getItem('scannedCode');
-    if (scanned) {
-        codeInput.value = scanned;
-        localStorage.removeItem('scannedCode');
-        // Déclencher la recherche
-        const inputEvent = new Event('input', { bubbles: true });
-        codeInput.dispatchEvent(inputEvent);
-        dlvInput.focus();
-    }
+    // Réception du code scanné via localStorage
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'scannedCode') {
+            const scanned = e.newValue;
+            if (scanned) {
+                codeInput.value = scanned;
+                // Déclencher la recherche (mise à jour de la désignation)
+                const inputEvent = new Event('input', { bubbles: true });
+                codeInput.dispatchEvent(inputEvent);
+                // Nettoyer pour éviter une réutilisation
+                localStorage.removeItem('scannedCode');
+                // Option : focus sur le champ suivant ou notifier
+                dlvInput.focus();
+            }
+        }
+    });
 
+    // ---------- Événements ----------
     codeInput.addEventListener('input', mettreAJourDesignation);
     codeInput.addEventListener('blur', mettreAJourDesignation);
     addBtn.onclick = ajouterDepuisBase;
     nonBaseBtn.onclick = ajouterHorsBase;
     exportBtn.onclick = exporterEtReinitialiser;
 
+    // ---------- Initialisation ----------
     chargerLignesSauvegardees();
     if (lignes.length > 0) renderTable();
     chargerBase();
