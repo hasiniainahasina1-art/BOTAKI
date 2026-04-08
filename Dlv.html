@@ -271,10 +271,10 @@
                 <td>${escapeHtml(l.designation)}</td>
                 <td>${escapeHtml(dateFormatee)}</td>
                 <td>${l.quantite}</td>
-                <td>${l.prix.toFixed(0)} Ar</td>
-                <td>${totalLigne.toFixed(0)} Ar</td>
+                <td>${l.prix.toFixed(0)} Ar</div>
+                <td>${totalLigne.toFixed(0)} Ar</div>
                 <td><button class="delete-btn" data-index="${idx}">🗑️</button></td>
-            </tr>`;
+            </table>`;
         });
         tableBody.innerHTML = html;
         document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -289,7 +289,7 @@
 
     // ---------- Chargement base de données ----------
     async function chargerBase() {
-        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8">⏳ Téléchargement...</div></div>';
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -321,11 +321,11 @@
             }
             produitsDB = produits;
             baseChargee = true;
-            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</td></tr>';
+            if (lignes.length === 0) tableBody.innerHTML = '<tr><td colspan="8">Aucune ligne. Saisissez un code valide.</div></div>';
             else renderTable();
         } catch (err) {
             console.error(err);
-            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="background:#fee2e2;">⚠️ Erreur : ${err.message}<br>Vérifiez l'URL et la connexion.</div></div>`;
             baseChargee = false;
         }
     }
@@ -482,39 +482,4 @@
     }
 
     // ---------- Scanner : double-clic et écoute storage ----------
-    codeInput.addEventListener('dblclick', () => {
-        // Ouvre scan.html dans un nouvel onglet (ou une nouvelle fenêtre)
-        window.open('scan.html', '_blank');
-    });
-
-    // Réception du code scanné via localStorage
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'scannedCode') {
-            const scanned = e.newValue;
-            if (scanned) {
-                codeInput.value = scanned;
-                // Déclencher la recherche (mise à jour de la désignation)
-                const inputEvent = new Event('input', { bubbles: true });
-                codeInput.dispatchEvent(inputEvent);
-                // Nettoyer pour éviter une réutilisation
-                localStorage.removeItem('scannedCode');
-                // Option : focus sur le champ suivant ou notifier
-                dlvInput.focus();
-            }
-        }
-    });
-
-    // ---------- Événements ----------
-    codeInput.addEventListener('input', mettreAJourDesignation);
-    codeInput.addEventListener('blur', mettreAJourDesignation);
-    addBtn.onclick = ajouterDepuisBase;
-    nonBaseBtn.onclick = ajouterHorsBase;
-    exportBtn.onclick = exporterEtReinitialiser;
-
-    // ---------- Initialisation ----------
-    chargerLignesSauvegardees();
-    if (lignes.length > 0) renderTable();
-    chargerBase();
-</script>
-</body>
-</html>
+    codeInput.addEventListe
