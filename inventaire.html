@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOTAKI - Inventaire</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy-deep: #131c42;
+            --navy: #1e2f6b;
+            --blue: #2d4593;
+            --blue-soft: #3f57ab;
+            --gold: #f4b400;
+            --gold-light: #ffd54f;
+            --ink: #f5f6fb;
+            --ink-muted: #a9b3d6;
+            --line: rgba(244, 180, 0, 0.16);
+            --card-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at 15% -10%, var(--blue-soft) 0%, transparent 45%),
+                radial-gradient(circle at 100% 110%, var(--navy) 0%, transparent 55%),
+                linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 100%);
+            color: var(--ink);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 20px 60px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 26px),
+                repeating-linear-gradient(-45deg, var(--line) 0 1px, transparent 1px 26px);
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 600px;
+            padding: 48px 0 36px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            animation: rise 0.6s ease both;
+        }
+
+        .logo {
+            flex-shrink: 0;
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(155deg, var(--gold) 0%, #d99a00 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 28px;
+            color: var(--navy-deep);
+            box-shadow: 0 8px 24px rgba(244, 180, 0, 0.25);
+            transform: rotate(-4deg);
+        }
+
+        .brand .title {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 26px;
+            letter-spacing: 0.3px;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .brand .subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--gold-light);
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 600px;
+            animation: rise 0.6s ease 0.1s both;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(244, 180, 0, 0.2);
+            border-radius: 20px;
+            padding: 20px 22px;
+        }
+
+        .emplacement-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .emplacement-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--ink-muted);
+            white-space: nowrap;
+        }
+
+        input, .designation-readonly {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(244, 180, 0, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, .designation-readonly:focus {
+            border-color: var(--gold);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s, background 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            color: var(--navy-deep);
+            box-shadow: 0 4px 12px rgba(244, 180, 0, 0.3);
+        }
+
+        .btn-gold:hover { background: var(--gold-light); transform: translateY(-2px); }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(244, 180, 0, 0.4);
+            color: var(--gold-light);
+        }
+
+        .btn-outline:hover { background: rgba(244, 180, 0, 0.1); }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            border: none;
+        }
+        .btn-danger:hover { background: #b91c1c; }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--gold-light);
+            letter-spacing: 0.5px;
+        }
+
+        .designation-readonly {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(244, 180, 0, 0.15);
+            cursor: not-allowed;
+        }
+
+        .designation-editable {
+            cursor: text;
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(244, 180, 0, 0.3);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid rgba(244, 180, 0, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+            margin-top: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            color: var(--ink);
+        }
+
+        th {
+            background: rgba(244, 180, 0, 0.15);
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--gold);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(244, 180, 0, 0.1);
+            vertical-align: middle;
+        }
+
+        tr.ligne-hors-base {
+            background-color: rgba(220, 38, 38, 0.15) !important;
+        }
+
+        .action-btns button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0 2px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-edit { color: #facc15; }
+        .btn-edit:hover { background: rgba(250, 204, 21, 0.15); }
+        .btn-delete { color: #ef4444; }
+        .btn-delete:hover { background: rgba(239, 68, 68, 0.15); }
+
+        .footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .save-status {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: #2d4593cc;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .info-scan {
+            font-size: 0.65rem;
+            color: var(--ink-muted);
+            margin-top: 2px;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .form-row, .emplacement-section { flex-direction: column; align-items: stretch; }
+            .btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">B</div>
+    <div class="brand">
+        <div class="title">BOTAKI</div>
+        <div class="subtitle">Inventaire</div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Section emplacement -->
+    <div class="card" id="emplacementCard">
+        <div id="emplacementInitial" style="display: flex; flex-direction: column; gap: 10px;">
+            <label style="font-size:0.8rem;">📍 Nommer l'emplacement de stock</label>
+            <div class="emplacement-section">
+                <input type="text" id="emplacementInput" placeholder="Ex: Étagère 3 - Allée B" autocomplete="off" style="flex:1;">
+                <button class="btn btn-gold" id="validerEmplacement">Valider</button>
+            </div>
+        </div>
+        <div id="emplacementActif" style="display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="emplacement-label">📍 Emplacement :</span>
+                <span id="emplacementNom" style="font-weight: 700; font-size: 1.1rem; color: var(--gold-light);"></span>
+            </div>
+            <button class="btn btn-outline" id="modifierEmplacement">Modifier</button>
+        </div>
+    </div>
+
+    <!-- Formulaire article (caché tant que pas d'emplacement) -->
+    <div class="card" id="articleCard" style="display: none;">
+        <div class="form-row">
+            <div class="field-group">
+                <label>🔍 Code barre / article</label>
+                <input type="text" id="codeInput" placeholder="Scanner ou taper (double-clic pour scanner)" autocomplete="off">
+                <div class="info-scan">💡 Double-clic pour ouvrir le scanner</div>
+            </div>
+            <div class="field-group">
+                <label>📝 Désignation</label>
+                <input type="text" id="designationInput" class="designation-readonly" readonly placeholder="Auto-recherche" autocomplete="off">
+            </div>
+            <div class="field-group" style="max-width: 100px;">
+                <label>📦 Quantité</label>
+                <input type="number" id="quantiteInput" value="1" min="1" step="1" inputmode="numeric">
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
+            <button id="addBaseBtn" class="btn btn-gold" disabled>✅ Ajouter (Base)</button>
+            <button id="addHorsBaseBtn" class="btn btn-outline">⚠️ Ajouter Hors base</button>
+        </div>
+    </div>
+
+    <!-- Tableau des articles inventoriés -->
+    <div class="card" id="tableCard" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.2rem;">📋 Articles comptés</h3>
+            <div class="footer-actions">
+                <button id="exportBtn" class="btn btn-outline">📎 Exporter XLSX</button>
+                <button id="resetBtn" class="btn btn-danger">🗑️ Réinitialiser</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="inventaireTable">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Désignation</th>
+                        <th>Qté</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="4" style="text-align:center;">Aucun article saisi</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="saveStatus" class="save-status">💾 Sauvegardé</div>
+
+<script>
+    (function() {
+        // ---- Configuration ----
+        const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
+        const STORAGE_KEY = 'BOTAKI_inventaire';
+
+        // ---- État ----
+        let produitsDB = [];
+        let inventaire = {
+            emplacement: '',
+            lignes: []          // { codeBarre, codeArticle, designation, quantite, horsBase }
+        };
+        let dernierProduitValide = null;
+        let baseChargee = false;
+        let scannerActif = false; // Pour éviter double réception
+
+        // ---- DOM ----
+        const emplacementInitial = document.getElementById('emplacementInitial');
+        const emplacementActif = document.getElementById('emplacementActif');
+        const emplacementInput = document.getElementById('emplacementInput');
+        const validerEmplacementBtn = document.getElementById('validerEmplacement');
+        const modifierEmplacementBtn = document.getElementById('modifierEmplacement');
+        const emplacementNomSpan = document.getElementById('emplacementNom');
+        const articleCard = document.getElementById('articleCard');
+        const tableCard = document.getElementById('tableCard');
+        const codeInput = document.getElementById('codeInput');
+        const designationInput = document.getElementById('designationInput');
+        const quantiteInput = document.getElementById('quantiteInput');
+        const addBaseBtn = document.getElementById('addBaseBtn');
+        const addHorsBaseBtn = document.getElementById('addHorsBaseBtn');
+        const tableBody = document.getElementById('tableBody');
+        const exportBtn = document.getElementById('exportBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const saveStatusDiv = document.getElementById('saveStatus');
+
+        // ---- Sauvegarde / Chargement ----
+        function sauvegarder() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(inventaire));
+            saveStatusDiv.style.opacity = '1';
+            setTimeout(() => { saveStatusDiv.style.opacity = '0'; }, 1500);
+        }
+
+        function chargerSauvegarde() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data && typeof data.emplacement === 'string' && Array.isArray(data.lignes)) {
+                        inventaire = data;
+                    }
+                } catch(e) {}
+            }
+            // Mise à jour UI selon présence emplacement
+            if (inventaire.emplacement) {
+                afficherEmplacementActif();
+            } else {
+                afficherSaisieEmplacement();
+            }
+            renderTable();
+        }
+
+        function afficherSaisieEmplacement() {
+            emplacementInitial.style.display = 'flex';
+            emplacementActif.style.display = 'none';
+            articleCard.style.display = 'none';
+            tableCard.style.display = 'none';
+            inventaire.emplacement = '';
+            inventaire.lignes = [];
+            sauvegarder();
+            renderTable();
+        }
+
+        function afficherEmplacementActif() {
+            emplacementInitial.style.display = 'none';
+            emplacementActif.style.display = 'flex';
+            emplacementNomSpan.textContent = inventaire.emplacement;
+            articleCard.style.display = 'block';
+            tableCard.style.display = 'block';
+            if (inventaire.lignes.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4">Aucun article saisi</td></tr>';
+            } else {
+                renderTable();
+            }
+            // Focus sur le champ code
+            setTimeout(() => codeInput.focus(), 100);
+        }
+
+        // ---- Utilitaires ----
+        function normaliserCode(code) {
+            return code ? String(code).replace(/[\s.\-]/g, '') : '';
+        }
+
+        function rechercherProduit(identifiant) {
+            if (!identifiant.trim() || !baseChargee) return null;
+            const id = normaliserCode(identifiant.trim());
+            return produitsDB.find(p => normaliserCode(p.codeBarre) === id || normaliserCode(p.codeArticle) === id);
+        }
+
+        function mettreAJourDesignation() {
+            const code = codeInput.value.trim();
+            if (!code) {
+                designationInput.value = '';
+                designationInput.classList.remove('designation-editable');
+                designationInput.readOnly = true;
+                dernierProduitValide = null;
+                addBaseBtn.disabled = true;
+                codeInput.classList.remove('valid', 'invalid');
+                return;
+            }
+            if (!baseChargee) {
+                designationInput.value = '⌛ Base en chargement...';
+                addBaseBtn.disabled = true;
+                return;
+            }
+            const produit = rechercherProduit(code);
+            if (produit) {
+                designationInput.value = produit.designation;
+                designationInput.classList.remove('designation-editable');
+                designationInput.readOnly = true;
+                dernierProduitValide = produit;
+                addBaseBtn.disabled = false;
+                codeInput.classList.add('valid');
+                codeInput.classList.remove('invalid');
+            } else {
+                designationInput.value = '❌ Non trouvé';
+                designationInput.classList.add('designation-editable');
+                designationInput.readOnly = false;
+                dernierProduitValide = null;
+                addBaseBtn.disabled = true;
+                codeInput.classList.remove('valid');
+                codeInput.classList.add('invalid');
+            }
+        }
+
+        function viderFormulaireArticle() {
+            codeInput.value = '';
+            designationInput.value = '';
+            designationInput.classList.remove('designation-editable');
+            designationInput.readOnly = true;
+            quantiteInput.value = '1';
+            dernierProduitValide = null;
+            addBaseBtn.disabled = true;
+            codeInput.classList.remove('valid', 'invalid');
+        }
+
+        // ---- Gestion des lignes ----
+        function ajouterLigne(codeBarre, codeArticle, designation, quantite, horsBase) {
+            inventaire.lignes.push({
+                codeBarre: codeBarre || '',
+                codeArticle: codeArticle || '',
+                designation: designation,
+                quantite: quantite,
+                horsBase: horsBase
+            });
+            renderTable();
+            sauvegarder();
+            viderFormulaireArticle();
+            codeInput.focus();
+        }
+
+        function supprimerLigne(index) {
+            inventaire.lignes.splice(index, 1);
+            renderTable();
+            sauvegarder();
+        }
+
+        function modifierLigne(index) {
+            const ligne = inventaire.lignes[index];
+            // Pré-remplir le formulaire
+            codeInput.value = ligne.codeBarre || ligne.codeArticle || '';
+            designationInput.value = ligne.designation;
+            if (ligne.horsBase) {
+                designationInput.classList.add('designation-editable');
+                designationInput.readOnly = false;
+            } else {
+                designationInput.classList.remove('designation-editable');
+                designationInput.readOnly = true;
+                // Rechercher pour rafraîchir dernierProduitValide
+                const produit = rechercherProduit(codeInput.value);
+                if (produit) {
+                    dernierProduitValide = produit;
+                    addBaseBtn.disabled = false;
+                } else {
+                    dernierProduitValide = null;
+                    addBaseBtn.disabled = true;
+                }
+            }
+            quantiteInput.value = ligne.quantite;
+            // On supprime la ligne existante et on ré-ajoutera via le bouton
+            inventaire.lignes.splice(index, 1);
+            sauvegarder();
+            renderTable();
+            codeInput.focus();
+        }
+
+        function renderTable() {
+            if (!inventaire.lignes.length) {
+                tableBody.innerHTML = '<tr><td colspan="4">Aucun article saisi</td></tr>';
+                return;
+            }
+            let html = '';
+            inventaire.lignes.forEach((ligne, idx) => {
+                const code = ligne.codeBarre || ligne.codeArticle || '-';
+                const rowClass = ligne.horsBase ? 'class="ligne-hors-base"' : '';
+                html += `<tr ${rowClass}>
+                    <td>${escapeHtml(code)}</td>
+                    <td>${escapeHtml(ligne.designation)}</td>
+                    <td>${ligne.quantite}</td>
+                    <td class="action-btns">
+                        <button class="btn-edit" data-index="${idx}">✏️</button>
+                        <button class="btn-delete" data-index="${idx}">🗑️</button>
+                    </td>
+                </tr>`;
+            });
+            tableBody.innerHTML = html;
+
+            // Attacher événements
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    modifierLigne(idx);
+                });
+            });
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    if (confirm('Supprimer cet article ?')) supprimerLigne(idx);
+                });
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+        }
+
+        // ---- Chargement base ----
+        async function chargerBase() {
+            tableBody.innerHTML = '<tr><td colspan="4">⏳ Chargement base articles...</td></tr>';
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 15000);
+                const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
+                clearTimeout(timeout);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const buffer = await response.arrayBuffer();
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                if (!rows || rows.length < 2) throw new Error('Fichier vide');
+
+                let start = 0;
+                if (rows[0] && String(rows[0][0] || '').toLowerCase().includes('code')) start = 1;
+
+                produitsDB = [];
+                for (let i = start; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!r || r.length < 3) continue;
+                    const cb = String(r[0] || '').trim();
+                    const ca = String(r[1] || '').trim();
+                    const des = String(r[2] || '').trim();
+                    if (cb || ca) produitsDB.push({ codeBarre: cb, codeArticle: ca, designation: des || `Article ${cb||ca}` });
+                }
+                baseChargee = true;
+                renderTable();
+            } catch(e) {
+                console.error(e);
+                tableBody.innerHTML = `<tr><td colspan="4" style="color:#ef4444;">❌ Erreur chargement base. Vérifiez la connexion.</td></tr>`;
+                baseChargee = false;
+            }
+        }
+
+        // ---- Ajout depuis formulaire ----
+        function ajouterDepuisBase() {
+            if (!dernierProduitValide) return;
+            let qte = parseInt(quantiteInput.value, 10);
+            if (isNaN(qte) || qte < 1) qte = 1;
+            ajouterLigne(
+                dernierProduitValide.codeBarre,
+                dernierProduitValide.codeArticle,
+                dernierProduitValide.designation,
+                qte,
+                false
+            );
+        }
+
+        function ajouterHorsBase() {
+            const code = codeInput.value.trim();
+            if (!code) { alert('Veuillez saisir un code.'); return; }
+            let designation = designationInput.value.trim();
+            if (!designation || designation === '❌ Non trouvé') {
+                designation = prompt('Désignation pour cet article hors base :', 'HORS BASE');
+                if (!designation) return;
+            }
+            let qte = parseInt(quantiteInput.value, 10);
+            if (isNaN(qte) || qte < 1) qte = 1;
+            // Déterminer si c'est un code article (8 chiffres) ou code barre
+            let codeBarre = '', codeArticle = '';
+            if (/^\d{8}$/.test(code)) codeArticle = code;
+            else codeBarre = code;
+            ajouterLigne(codeBarre, codeArticle, designation, qte, true);
+        }
+
+        // ---- Scanner (identique Dlv) ----
+        codeInput.addEventListener('dblclick', () => {
+            window.open('scan.html', '_blank');
+        });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'scannedCode' && e.newValue) {
+                codeInput.value = e.newValue;
+                codeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                localStorage.removeItem('scannedCode');
+                quantiteInput.focus();
+            }
+        });
+
+        // ---- Export Excel ----
+        async function exporterExcel() {
+            if (!inventaire.lignes.length) {
+                alert('Aucune ligne à exporter.');
+                return;
+            }
+            const workbook = new ExcelJS.Workbook();
+            const ws = workbook.addWorksheet('Inventaire');
+            ws.columns = [
+                { header: 'Emplacement', key: 'emplacement', width: 25 },
+                { header: 'Code', key: 'code', width: 18 },
+                { header: 'Désignation', key: 'designation', width: 35 },
+                { header: 'Quantité réelle', key: 'quantite', width: 15 }
+            ];
+            // Style en-tête
+            const headerRow = ws.getRow(1);
+            headerRow.eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0f172a' } };
+                cell.alignment = { horizontal: 'center' };
+            });
+            inventaire.lignes.forEach(l => {
+                ws.addRow({
+                    emplacement: inventaire.emplacement,
+                    code: l.codeBarre || l.codeArticle || '',
+                    designation: l.designation,
+                    quantite: l.quantite
+                });
+            });
+            ws.eachRow((row, rn) => {
+                if (rn > 1) row.eachCell(cell => cell.alignment = { horizontal: 'center' });
+            });
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, `inventaire_${inventaire.emplacement.replace(/[\\/*?:"<>|]/g,'')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function reinitialiser() {
+            if (confirm('Effacer tout l\'inventaire en cours ?')) {
+                inventaire.lignes = [];
+                sauvegarder();
+                renderTable();
+                viderFormulaireArticle();
+            }
+        }
+
+        // ---- Événements ----
+        validerEmplacementBtn.addEventListener('click', () => {
+            const emp = emplacementInput.value.trim();
+            if (!emp) { alert('Veuillez nommer l\'emplacement.'); return; }
+            inventaire.emplacement = emp;
+            sauvegarder();
+            afficherEmplacementActif();
+        });
+
+        modifierEmplacementBtn.addEventListener('click', () => {
+            if (inventaire.lignes.length > 0 && !confirm('Changer d\'emplacement effacera les articles déjà saisis. Continuer ?')) return;
+            afficherSaisieEmplacement();
+            emplacementInput.value = '';
+        });
+
+        codeInput.addEventListener('input', mettreAJourDesignation);
+        codeInput.addEventListener('blur', mettreAJourDesignation);
+
+        addBaseBtn.addEventListener('click', ajouterDepuisBase);
+        addHorsBaseBtn.addEventListener('click', ajouterHorsBase);
+
+        // Permettre la validation avec Entrée depuis le champ quantité
+        quantiteInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!addBaseBtn.disabled) ajouterDepuisBase();
+                else if (codeInput.value.trim()) ajouterHorsBase();
+            }
+        });
+
+        exportBtn.addEventListener('click', exporterExcel);
+        resetBtn.addEventListener('click', reinitialiser);
+
+        // ---- Initialisation ----
+        chargerSauvegarde();
+        chargerBase();
+    })();
+</script>
+</body>
+</html>
