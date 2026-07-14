@@ -153,6 +153,7 @@
   .action:nth-child(1) { animation-delay: 0.18s; }
   .action:nth-child(2) { animation-delay: 0.26s; }
   .action:nth-child(3) { animation-delay: 0.34s; }
+  .action:nth-child(4) { animation-delay: 0.42s; }
 
   .action:hover,
   .action:focus-visible {
@@ -486,7 +487,8 @@
     <span class="arrow">→</span>
   </a>
 
-  <a class="action" href="inventaire.html">
+  <!-- CARTE INVENTAIRE avec gestion simple/double clic -->
+  <a class="action" id="inventaireCard" href="inventaire.html" data-double-url="inventaires.html">
     <span class="icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="4" y="4" width="16" height="18" rx="2"></rect>
@@ -498,7 +500,7 @@
     </span>
     <span class="label">
       <span class="name">L'inventaire</span>
-      <span class="desc">Faciliter la réalisation d'un inventaire</span>
+      <span class="desc">Réaliser un inventaire (double-clic pour archives)</span>
     </span>
     <span class="arrow">→</span>
   </a>
@@ -558,6 +560,36 @@
 </div>
 
 <script>
+  // Gestion du double-clic sur la carte inventaire
+  (function() {
+    const inventaireCard = document.getElementById('inventaireCard');
+    if (!inventaireCard) return;
+
+    let clickTimer = null;
+
+    inventaireCard.addEventListener('click', function(e) {
+      e.preventDefault(); // On empêche la navigation immédiate
+
+      if (clickTimer === null) {
+        // Premier clic : on lance un timer de 300ms
+        clickTimer = setTimeout(() => {
+          // Simple clic confirmé
+          window.location.href = inventaireCard.getAttribute('href');
+          clickTimer = null;
+        }, 300);
+      } else {
+        // Deuxième clic avant la fin du timer => double-clic
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        const doubleUrl = inventaireCard.getAttribute('data-double-url');
+        if (doubleUrl) {
+          window.location.href = doubleUrl;
+        }
+      }
+    });
+  })();
+
+  // ----- Support modal (inchangé) -----
   function openSupportModal() {
     document.getElementById('supportOverlay').classList.add('open');
     document.addEventListener('keydown', closeOnEscape);
@@ -572,8 +604,6 @@
     if (e.key === 'Escape') closeSupportModal();
   }
 
-  // Remplacer cette URL par celle fournie par votre compte Formspree
-  // (formspree.io -> créer un formulaire -> copier l'URL du type https://formspree.io/f/xxxxxxx)
   const SUPPORT_FORM_ENDPOINT = 'https://formspree.io/f/VOTRE_ID_FORMULAIRE';
 
   async function submitSupportForm(event) {
