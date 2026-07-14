@@ -21,7 +21,6 @@
             --ink: #f5f6fb;
             --ink-muted: #a9b3d6;
             --line: rgba(244, 180, 0, 0.16);
-            --card-bg: rgba(255, 255, 255, 0.05);
         }
 
         * { box-sizing: border-box; }
@@ -133,7 +132,7 @@
             white-space: nowrap;
         }
 
-        input, .designation-readonly {
+        input {
             padding: 10px 14px;
             border-radius: 12px;
             border: 1px solid rgba(244, 180, 0, 0.3);
@@ -293,7 +292,7 @@
             margin-top: 2px;
         }
 
-        /* MODALE */
+        /* MODALES */
         .modal {
             display: none;
             position: fixed;
@@ -446,6 +445,18 @@
     </div>
 </div>
 
+<!-- MODALE DOUBLON -->
+<div id="doublonModal" class="modal">
+    <div class="modal-content">
+        <h3>⚠️ Article déjà présent</h3>
+        <p id="doublonMessage">Cet article est déjà dans l'inventaire. Voulez-vous ajouter la quantité à l'existant ?</p>
+        <div class="modal-buttons">
+            <button class="btn btn-outline" id="cancelDoublonBtn">Annuler</button>
+            <button class="btn btn-gold" id="confirmDoublonBtn">Confirmer</button>
+        </div>
+    </div>
+</div>
+
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
@@ -462,6 +473,8 @@
         };
         let dernierProduitValide = null;
         let baseChargee = false;
+        // Stockage temporaire pour la gestion du doublon
+        let doublonData = null; // { codeBarre, codeArticle, designation, quantite, horsBase }
 
         // ---- DOM ----
         const emplacementInitial = document.getElementById('emplacementInitial');
@@ -487,6 +500,12 @@
         const modalQuantite = document.getElementById('modalQuantite');
         const confirmModalBtn = document.getElementById('confirmModalBtn');
         const cancelModalBtn = document.getElementById('cancelModalBtn');
+
+        // Modale doublon
+        const doublonModal = document.getElementById('doublonModal');
+        const doublonMessage = document.getElementById('doublonMessage');
+        const confirmDoublonBtn = document.getElementById('confirmDoublonBtn');
+        const cancelDoublonBtn = document.getElementById('cancelDoublonBtn');
 
         // ---- Sauvegarde / Chargement ----
         function sauvegarder() {
@@ -607,6 +626,18 @@
             codeInput.focus();
         }
 
+        // Vérification doublon : retourne l'index de la ligne existante, ou -1
+        function trouverDoublon(codeBarre, codeArticle) {
+            const cbNorm = normaliserCode(codeBarre);
+            const caNorm = normaliserCode(codeArticle);
+            return inventaire.lignes.findIndex(l => {
+                if (cbNorm && normaliserCode(l.codeBarre) === cbNorm) return true;
+                if (caNorm && normaliserCode(l.codeArticle) === caNorm) return true;
+                // Si la ligne a les deux vides, on ne considère pas comme doublon
+                return false;
+            });
+        }
+
         function supprimerLigne(index) {
             inventaire.lignes.splice(index, 1);
             renderTable();
@@ -619,7 +650,7 @@
             designationInput.value = ligne.designation;
             if (ligne.horsBase) {
                 designationInput.classList.add('designation-editable');
-                designationInput.readOnly = true;  // Garde readonly, juste visuel
+                designationInput.readOnly = true;
             } else {
                 designationInput.classList.remove('designation-editable');
                 designationInput.readOnly = true;
@@ -714,13 +745,51 @@
             }
         }
 
-        // ---- Ajout depuis formulaire (bouton principal) ----
+        // ---- Gestion des doublons ----
+        function ouvrirDoublon(data) {
+            doublonData = data;
+            doublonMessage.textContent = `Le code "${data.codeBarre || data.codeArticle}" existe déjà. Voulez-vous ajouter la quantité (${data.quantite}) à la ligne existante ?`;
+            doublonModal.classList.add('open');
+        }
+
+        function fermerDoublon() {
+            doublonModal.classList.remove('open');
+            doublonData = null;
+        }
+
+        function confirmerDoublon() {
+            if (!doublonData) return;
+            const { codeBarre, codeArticle, quantite } = doublonData;
+            const idx = trouverDoublon(codeBarre, codeArticle);
+            if (idx !== -1) {
+                inventaire.lignes[idx].quantite += quantite;
+                renderTable();
+                sauvegarder();
+            }
+            fermerDoublon();
+            viderFormulaireArticle();
+            codeInput.focus();
+        }
+
+        // ---- Ajout depuis formulaire (avec vérification doublon) ----
+        function preparerAjout(codeBarre, codeArticle, designation, quantite, horsBase) {
+            // Vérifier si doublon
+            const idx = trouverDoublon(codeBarre, codeArticle);
+            if (idx !== -1) {
+                // Ouvrir modale doublon
+                ouvrirDoublon({ codeBarre, codeArticle, designation, quantite, horsBase });
+                return false;
+            }
+            // Pas de doublon, ajout direct
+            ajouterLigne(codeBarre, codeArticle, designation, quantite, horsBase);
+            return true;
+        }
+
         function gererAjout() {
             if (dernierProduitValide) {
-                // Ajout normal
                 let qte = parseInt(quantiteInput.value, 10);
                 if (isNaN(qte) || qte < 1) qte = 1;
-                ajouterLigne(
+                preparerAjout(
                     dernierProduitValide.codeBarre,
                     dernierProduitValide.codeArticle,
                     dernierProduitValide.designation,
@@ -728,11 +797,10 @@
                     false
                 );
             } else {
-                // Code non trouvé -> ouvrir modale de vérification
                 const codeSaisi = codeInput.value.trim();
                 if (!codeSaisi) return;
                 modalCodeDisplay.textContent = codeSaisi;
-                modalQuantite.value = quantiteInput.value || 1; // pré-remplir avec la quantité du formulaire
+                modalQuantite.value = quantiteInput.value || 1;
                 horsBaseModal.classList.add('open');
             }
         }
@@ -749,12 +817,11 @@
                 return;
             }
             const codeSaisi = codeInput.value.trim();
-            // Déterminer si c'est un code article (8 chiffres) ou code barre
             let codeBarre = '', codeArticle = '';
             if (/^\d{8}$/.test(codeSaisi)) codeArticle = codeSaisi;
             else codeBarre = codeSaisi;
 
-            ajouterLigne(codeBarre, codeArticle, '⚠️ HORS BASE', qte, true);
+            preparerAjout(codeBarre, codeArticle, '⚠️ HORS BASE', qte, true);
             fermerModale();
         }
 
@@ -772,7 +839,7 @@
             }
         });
 
-        // ---- Export Excel ----
+        // ---- Export Excel (colonnes A: Code article, B: Désignation, C: Code barre, D: Emplacement) ----
         async function exporterExcel() {
             if (!inventaire.lignes.length) {
                 alert('Aucune ligne à exporter.');
@@ -781,10 +848,10 @@
             const workbook = new ExcelJS.Workbook();
             const ws = workbook.addWorksheet('Inventaire');
             ws.columns = [
-                { header: 'Emplacement', key: 'emplacement', width: 25 },
-                { header: 'Code', key: 'code', width: 18 },
+                { header: 'Code Article', key: 'codeArticle', width: 20 },
                 { header: 'Désignation', key: 'designation', width: 35 },
-                { header: 'Quantité réelle', key: 'quantite', width: 15 }
+                { header: 'Code Barre', key: 'codeBarre', width: 18 },
+                { header: 'Emplacement', key: 'emplacement', width: 25 }
             ];
             const headerRow = ws.getRow(1);
             headerRow.eachCell(cell => {
@@ -794,10 +861,10 @@
             });
             inventaire.lignes.forEach(l => {
                 ws.addRow({
-                    emplacement: inventaire.emplacement,
-                    code: l.codeBarre || l.codeArticle || '',
+                    codeArticle: l.codeArticle || l.codeBarre || '',
                     designation: l.designation,
-                    quantite: l.quantite
+                    codeBarre: l.codeBarre || '',
+                    emplacement: inventaire.emplacement
                 });
             });
             ws.eachRow((row, rn) => {
@@ -834,9 +901,7 @@
 
         codeInput.addEventListener('input', mettreAJourDesignation);
         codeInput.addEventListener('blur', mettreAJourDesignation);
-
         addBtn.addEventListener('click', gererAjout);
-
         quantiteInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -844,16 +909,22 @@
             }
         });
 
-        // Modale
+        // Modale hors base
         confirmModalBtn.addEventListener('click', enregistrerHorsBase);
         cancelModalBtn.addEventListener('click', fermerModale);
-        // Fermer en cliquant à l'extérieur
-        horsBaseModal.addEventListener('click', (e) => {
-            if (e.target === horsBaseModal) fermerModale();
-        });
-        // Touche Échap pour fermer
+        horsBaseModal.addEventListener('click', (e) => { if (e.target === horsBaseModal) fermerModale(); });
+
+        // Modale doublon
+        confirmDoublonBtn.addEventListener('click', confirmerDoublon);
+        cancelDoublonBtn.addEventListener('click', fermerDoublon);
+        doublonModal.addEventListener('click', (e) => { if (e.target === doublonModal) fermerDoublon(); });
+
+        // Touche Échap pour fermer les modales
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && horsBaseModal.classList.contains('open')) fermerModale();
+            if (e.key === 'Escape') {
+                if (horsBaseModal.classList.contains('open')) fermerModale();
+                if (doublonModal.classList.contains('open')) fermerDoublon();
+            }
         });
 
         exportBtn.addEventListener('click', exporterExcel);
