@@ -145,7 +145,7 @@
             transition: border-color 0.2s;
         }
 
-        input:focus, .designation-readonly:focus {
+        input:focus {
             border-color: var(--gold);
             background: rgba(255, 255, 255, 0.1);
         }
@@ -211,12 +211,6 @@
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(244, 180, 0, 0.15);
             cursor: not-allowed;
-        }
-
-        .designation-editable {
-            cursor: text;
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(244, 180, 0, 0.3);
         }
 
         .table-wrapper {
@@ -299,6 +293,56 @@
             margin-top: 2px;
         }
 
+        /* MODALE */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal.open { display: flex; }
+        .modal-content {
+            background: linear-gradient(165deg, var(--navy) 0%, var(--navy-deep) 100%);
+            border: 1px solid rgba(244, 180, 0, 0.4);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .modal-content h3 {
+            margin: 0 0 12px;
+            color: var(--gold-light);
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+        }
+        .modal-content p {
+            margin: 0 0 20px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(244, 180, 0, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--ink);
+            font-size: 1rem;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
         @keyframes rise {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -357,8 +401,7 @@
             </div>
         </div>
         <div style="display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
-            <button id="addBaseBtn" class="btn btn-gold" disabled>✅ Ajouter (Base)</button>
-            <button id="addHorsBaseBtn" class="btn btn-outline">⚠️ Ajouter Hors base</button>
+            <button id="addBtn" class="btn btn-gold" disabled>✅ Ajouter</button>
         </div>
     </div>
 
@@ -389,6 +432,20 @@
     </div>
 </div>
 
+<!-- MODALE HORS BASE -->
+<div id="horsBaseModal" class="modal">
+    <div class="modal-content">
+        <h3>⚠️ Code introuvable</h3>
+        <p>Vérifiez bien que ce code article ou code barre est valide :<br><strong id="modalCodeDisplay" style="color: var(--gold-light);"></strong></p>
+        <label style="font-size:0.8rem; color: var(--ink-muted);">Quantité (obligatoire)</label>
+        <input type="number" id="modalQuantite" min="1" value="1" step="1" inputmode="numeric">
+        <div class="modal-buttons">
+            <button class="btn btn-outline" id="cancelModalBtn">Annuler</button>
+            <button class="btn btn-gold" id="confirmModalBtn">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
 <div id="saveStatus" class="save-status">💾 Sauvegardé</div>
 
 <script>
@@ -405,7 +462,6 @@
         };
         let dernierProduitValide = null;
         let baseChargee = false;
-        let scannerActif = false; // Pour éviter double réception
 
         // ---- DOM ----
         const emplacementInitial = document.getElementById('emplacementInitial');
@@ -419,12 +475,18 @@
         const codeInput = document.getElementById('codeInput');
         const designationInput = document.getElementById('designationInput');
         const quantiteInput = document.getElementById('quantiteInput');
-        const addBaseBtn = document.getElementById('addBaseBtn');
-        const addHorsBaseBtn = document.getElementById('addHorsBaseBtn');
+        const addBtn = document.getElementById('addBtn');
         const tableBody = document.getElementById('tableBody');
         const exportBtn = document.getElementById('exportBtn');
         const resetBtn = document.getElementById('resetBtn');
         const saveStatusDiv = document.getElementById('saveStatus');
+
+        // Modale hors base
+        const horsBaseModal = document.getElementById('horsBaseModal');
+        const modalCodeDisplay = document.getElementById('modalCodeDisplay');
+        const modalQuantite = document.getElementById('modalQuantite');
+        const confirmModalBtn = document.getElementById('confirmModalBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
 
         // ---- Sauvegarde / Chargement ----
         function sauvegarder() {
@@ -443,7 +505,6 @@
                     }
                 } catch(e) {}
             }
-            // Mise à jour UI selon présence emplacement
             if (inventaire.emplacement) {
                 afficherEmplacementActif();
             } else {
@@ -469,12 +530,7 @@
             emplacementNomSpan.textContent = inventaire.emplacement;
             articleCard.style.display = 'block';
             tableCard.style.display = 'block';
-            if (inventaire.lignes.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4">Aucun article saisi</td></tr>';
-            } else {
-                renderTable();
-            }
-            // Focus sur le champ code
+            renderTable();
             setTimeout(() => codeInput.focus(), 100);
         }
 
@@ -496,13 +552,13 @@
                 designationInput.classList.remove('designation-editable');
                 designationInput.readOnly = true;
                 dernierProduitValide = null;
-                addBaseBtn.disabled = true;
+                addBtn.disabled = true;
                 codeInput.classList.remove('valid', 'invalid');
                 return;
             }
             if (!baseChargee) {
                 designationInput.value = '⌛ Base en chargement...';
-                addBaseBtn.disabled = true;
+                addBtn.disabled = true;
                 return;
             }
             const produit = rechercherProduit(code);
@@ -511,15 +567,15 @@
                 designationInput.classList.remove('designation-editable');
                 designationInput.readOnly = true;
                 dernierProduitValide = produit;
-                addBaseBtn.disabled = false;
+                addBtn.disabled = false;
                 codeInput.classList.add('valid');
                 codeInput.classList.remove('invalid');
             } else {
                 designationInput.value = '❌ Non trouvé';
                 designationInput.classList.add('designation-editable');
-                designationInput.readOnly = false;
+                designationInput.readOnly = true;
                 dernierProduitValide = null;
-                addBaseBtn.disabled = true;
+                addBtn.disabled = false;  // Actif pour déclencher la modale
                 codeInput.classList.remove('valid');
                 codeInput.classList.add('invalid');
             }
@@ -532,7 +588,7 @@
             designationInput.readOnly = true;
             quantiteInput.value = '1';
             dernierProduitValide = null;
-            addBaseBtn.disabled = true;
+            addBtn.disabled = true;
             codeInput.classList.remove('valid', 'invalid');
         }
 
@@ -559,27 +615,24 @@
 
         function modifierLigne(index) {
             const ligne = inventaire.lignes[index];
-            // Pré-remplir le formulaire
             codeInput.value = ligne.codeBarre || ligne.codeArticle || '';
             designationInput.value = ligne.designation;
             if (ligne.horsBase) {
                 designationInput.classList.add('designation-editable');
-                designationInput.readOnly = false;
+                designationInput.readOnly = true;  // Garde readonly, juste visuel
             } else {
                 designationInput.classList.remove('designation-editable');
                 designationInput.readOnly = true;
-                // Rechercher pour rafraîchir dernierProduitValide
                 const produit = rechercherProduit(codeInput.value);
                 if (produit) {
                     dernierProduitValide = produit;
-                    addBaseBtn.disabled = false;
+                    addBtn.disabled = false;
                 } else {
                     dernierProduitValide = null;
-                    addBaseBtn.disabled = true;
+                    addBtn.disabled = false;
                 }
             }
             quantiteInput.value = ligne.quantite;
-            // On supprime la ligne existante et on ré-ajoutera via le bouton
             inventaire.lignes.splice(index, 1);
             sauvegarder();
             renderTable();
@@ -607,7 +660,6 @@
             });
             tableBody.innerHTML = html;
 
-            // Attacher événements
             document.querySelectorAll('.btn-edit').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const idx = parseInt(btn.getAttribute('data-index'), 10);
@@ -662,35 +714,48 @@
             }
         }
 
-        // ---- Ajout depuis formulaire ----
-        function ajouterDepuisBase() {
-            if (!dernierProduitValide) return;
-            let qte = parseInt(quantiteInput.value, 10);
-            if (isNaN(qte) || qte < 1) qte = 1;
-            ajouterLigne(
-                dernierProduitValide.codeBarre,
-                dernierProduitValide.codeArticle,
-                dernierProduitValide.designation,
-                qte,
-                false
-            );
+        // ---- Ajout depuis formulaire (bouton principal) ----
+        function gererAjout() {
+            if (dernierProduitValide) {
+                // Ajout normal
+                let qte = parseInt(quantiteInput.value, 10);
+                if (isNaN(qte) || qte < 1) qte = 1;
+                ajouterLigne(
+                    dernierProduitValide.codeBarre,
+                    dernierProduitValide.codeArticle,
+                    dernierProduitValide.designation,
+                    qte,
+                    false
+                );
+            } else {
+                // Code non trouvé -> ouvrir modale de vérification
+                const codeSaisi = codeInput.value.trim();
+                if (!codeSaisi) return;
+                modalCodeDisplay.textContent = codeSaisi;
+                modalQuantite.value = quantiteInput.value || 1; // pré-remplir avec la quantité du formulaire
+                horsBaseModal.classList.add('open');
+            }
         }
 
-        function ajouterHorsBase() {
-            const code = codeInput.value.trim();
-            if (!code) { alert('Veuillez saisir un code.'); return; }
-            let designation = designationInput.value.trim();
-            if (!designation || designation === '❌ Non trouvé') {
-                designation = prompt('Désignation pour cet article hors base :', 'HORS BASE');
-                if (!designation) return;
+        // ---- Modale hors base ----
+        function fermerModale() {
+            horsBaseModal.classList.remove('open');
+        }
+
+        function enregistrerHorsBase() {
+            const qte = parseInt(modalQuantite.value, 10);
+            if (isNaN(qte) || qte < 1) {
+                alert('Veuillez entrer une quantité valide (minimum 1).');
+                return;
             }
-            let qte = parseInt(quantiteInput.value, 10);
-            if (isNaN(qte) || qte < 1) qte = 1;
+            const codeSaisi = codeInput.value.trim();
             // Déterminer si c'est un code article (8 chiffres) ou code barre
             let codeBarre = '', codeArticle = '';
-            if (/^\d{8}$/.test(code)) codeArticle = code;
-            else codeBarre = code;
-            ajouterLigne(codeBarre, codeArticle, designation, qte, true);
+            if (/^\d{8}$/.test(codeSaisi)) codeArticle = codeSaisi;
+            else codeBarre = codeSaisi;
+
+            ajouterLigne(codeBarre, codeArticle, '⚠️ HORS BASE', qte, true);
+            fermerModale();
         }
 
         // ---- Scanner (identique Dlv) ----
@@ -721,7 +786,6 @@
                 { header: 'Désignation', key: 'designation', width: 35 },
                 { header: 'Quantité réelle', key: 'quantite', width: 15 }
             ];
-            // Style en-tête
             const headerRow = ws.getRow(1);
             headerRow.eachCell(cell => {
                 cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -771,16 +835,25 @@
         codeInput.addEventListener('input', mettreAJourDesignation);
         codeInput.addEventListener('blur', mettreAJourDesignation);
 
-        addBaseBtn.addEventListener('click', ajouterDepuisBase);
-        addHorsBaseBtn.addEventListener('click', ajouterHorsBase);
+        addBtn.addEventListener('click', gererAjout);
 
-        // Permettre la validation avec Entrée depuis le champ quantité
         quantiteInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                if (!addBaseBtn.disabled) ajouterDepuisBase();
-                else if (codeInput.value.trim()) ajouterHorsBase();
+                gererAjout();
             }
+        });
+
+        // Modale
+        confirmModalBtn.addEventListener('click', enregistrerHorsBase);
+        cancelModalBtn.addEventListener('click', fermerModale);
+        // Fermer en cliquant à l'extérieur
+        horsBaseModal.addEventListener('click', (e) => {
+            if (e.target === horsBaseModal) fermerModale();
+        });
+        // Touche Échap pour fermer
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && horsBaseModal.classList.contains('open')) fermerModale();
         });
 
         exportBtn.addEventListener('click', exporterExcel);
