@@ -56,7 +56,7 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             padding: 48px 0 36px;
             display: flex;
             align-items: center;
@@ -106,7 +106,7 @@
             flex-direction: column;
             gap: 16px;
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             animation: rise 0.6s ease 0.1s both;
         }
 
@@ -225,6 +225,7 @@
             border-collapse: collapse;
             font-size: 0.8rem;
             color: var(--ink);
+            min-width: 500px;
         }
 
         th {
@@ -417,14 +418,15 @@
             <table id="inventaireTable">
                 <thead>
                     <tr>
-                        <th>Code</th>
+                        <th>Code Article</th>
+                        <th>Code Barre</th>
                         <th>Désignation</th>
                         <th>Qté</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="4" style="text-align:center;">Aucun article saisi</td></tr>
+                    <tr><td colspan="5" style="text-align:center;">Aucun article saisi</td></tr>
                 </tbody>
             </table>
         </div>
@@ -473,8 +475,7 @@
         };
         let dernierProduitValide = null;
         let baseChargee = false;
-        // Stockage temporaire pour la gestion du doublon
-        let doublonData = null; // { codeBarre, codeArticle, designation, quantite, horsBase }
+        let doublonData = null;
 
         // ---- DOM ----
         const emplacementInitial = document.getElementById('emplacementInitial');
@@ -494,14 +495,12 @@
         const resetBtn = document.getElementById('resetBtn');
         const saveStatusDiv = document.getElementById('saveStatus');
 
-        // Modale hors base
         const horsBaseModal = document.getElementById('horsBaseModal');
         const modalCodeDisplay = document.getElementById('modalCodeDisplay');
         const modalQuantite = document.getElementById('modalQuantite');
         const confirmModalBtn = document.getElementById('confirmModalBtn');
         const cancelModalBtn = document.getElementById('cancelModalBtn');
 
-        // Modale doublon
         const doublonModal = document.getElementById('doublonModal');
         const doublonMessage = document.getElementById('doublonMessage');
         const confirmDoublonBtn = document.getElementById('confirmDoublonBtn');
@@ -594,7 +593,7 @@
                 designationInput.classList.add('designation-editable');
                 designationInput.readOnly = true;
                 dernierProduitValide = null;
-                addBtn.disabled = false;  // Actif pour déclencher la modale
+                addBtn.disabled = false;
                 codeInput.classList.remove('valid');
                 codeInput.classList.add('invalid');
             }
@@ -626,14 +625,12 @@
             codeInput.focus();
         }
 
-        // Vérification doublon : retourne l'index de la ligne existante, ou -1
         function trouverDoublon(codeBarre, codeArticle) {
             const cbNorm = normaliserCode(codeBarre);
             const caNorm = normaliserCode(codeArticle);
             return inventaire.lignes.findIndex(l => {
                 if (cbNorm && normaliserCode(l.codeBarre) === cbNorm) return true;
                 if (caNorm && normaliserCode(l.codeArticle) === caNorm) return true;
-                // Si la ligne a les deux vides, on ne considère pas comme doublon
                 return false;
             });
         }
@@ -672,15 +669,17 @@
 
         function renderTable() {
             if (!inventaire.lignes.length) {
-                tableBody.innerHTML = '<tr><td colspan="4">Aucun article saisi</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5">Aucun article saisi</td></tr>';
                 return;
             }
             let html = '';
             inventaire.lignes.forEach((ligne, idx) => {
-                const code = ligne.codeBarre || ligne.codeArticle || '-';
+                const codeArt = ligne.codeArticle || '-';
+                const codeBarre = ligne.codeBarre || '-';
                 const rowClass = ligne.horsBase ? 'class="ligne-hors-base"' : '';
                 html += `<tr ${rowClass}>
-                    <td>${escapeHtml(code)}</td>
+                    <td>${escapeHtml(codeArt)}</td>
+                    <td>${escapeHtml(codeBarre)}</td>
                     <td>${escapeHtml(ligne.designation)}</td>
                     <td>${ligne.quantite}</td>
                     <td class="action-btns">
@@ -711,7 +710,7 @@
 
         // ---- Chargement base ----
         async function chargerBase() {
-            tableBody.innerHTML = '<tr><td colspan="4">⏳ Chargement base articles...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5">⏳ Chargement base articles...</td></tr>';
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 15000);
@@ -740,7 +739,7 @@
                 renderTable();
             } catch(e) {
                 console.error(e);
-                tableBody.innerHTML = `<tr><td colspan="4" style="color:#ef4444;">❌ Erreur chargement base. Vérifiez la connexion.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="5" style="color:#ef4444;">❌ Erreur chargement base. Vérifiez la connexion.</td></tr>`;
                 baseChargee = false;
             }
         }
@@ -771,16 +770,13 @@
             codeInput.focus();
         }
 
-        // ---- Ajout depuis formulaire (avec vérification doublon) ----
+        // ---- Ajout avec vérification doublon ----
         function preparerAjout(codeBarre, codeArticle, designation, quantite, horsBase) {
-            // Vérifier si doublon
             const idx = trouverDoublon(codeBarre, codeArticle);
             if (idx !== -1) {
-                // Ouvrir modale doublon
                 ouvrirDoublon({ codeBarre, codeArticle, designation, quantite, horsBase });
                 return false;
             }
-            // Pas de doublon, ajout direct
             ajouterLigne(codeBarre, codeArticle, designation, quantite, horsBase);
             return true;
         }
@@ -825,7 +821,7 @@
             fermerModale();
         }
 
-        // ---- Scanner (identique Dlv) ----
+        // ---- Scanner ----
         codeInput.addEventListener('dblclick', () => {
             window.open('scan.html', '_blank');
         });
@@ -839,7 +835,7 @@
             }
         });
 
-        // ---- Export Excel (colonnes A: Code article, B: Désignation, C: Code barre, D: Emplacement) ----
+        // ---- Export Excel (A: Code Article, B: Désignation, C: Code Barre, D: Emplacement) ----
         async function exporterExcel() {
             if (!inventaire.lignes.length) {
                 alert('Aucune ligne à exporter.');
@@ -909,17 +905,14 @@
             }
         });
 
-        // Modale hors base
         confirmModalBtn.addEventListener('click', enregistrerHorsBase);
         cancelModalBtn.addEventListener('click', fermerModale);
         horsBaseModal.addEventListener('click', (e) => { if (e.target === horsBaseModal) fermerModale(); });
 
-        // Modale doublon
         confirmDoublonBtn.addEventListener('click', confirmerDoublon);
         cancelDoublonBtn.addEventListener('click', fermerDoublon);
         doublonModal.addEventListener('click', (e) => { if (e.target === doublonModal) fermerDoublon(); });
 
-        // Touche Échap pour fermer les modales
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (horsBaseModal.classList.contains('open')) fermerModale();
