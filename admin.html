@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administration - BOTAKI</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -18,7 +19,7 @@
             background: linear-gradient(135deg, var(--navy-deep), var(--navy));
             color: var(--ink); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;
         }
-        .admin-container { max-width: 600px; width: 100%; }
+        .admin-container { max-width: 700px; width: 100%; }
         .card {
             background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
             border: 1px solid rgba(244,180,0,0.2); border-radius: 20px; padding: 24px; margin-bottom: 20px;
@@ -41,6 +42,29 @@
         input[type="password"] {
             width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;
         }
+
+        /* Modals */
+        .modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 2000;
+        }
+        .modal.open { display: flex; }
+        .modal-content {
+            background: linear-gradient(165deg, var(--navy) 0%, var(--navy-deep) 100%);
+            border: 1px solid rgba(244,180,0,0.4); border-radius: 20px;
+            padding: 24px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;
+        }
+        .mapping-row {
+            display: flex; align-items: center; gap: 10px; margin: 10px 0;
+        }
+        .mapping-row select {
+            flex:1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); border:1px solid var(--gold); color:white;
+        }
+        .sample-table {
+            width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.8rem;
+        }
+        .sample-table th { background: rgba(244,180,0,0.2); padding: 8px; text-align: left; }
+        .sample-table td { padding: 6px; border-bottom: 1px solid rgba(244,180,0,0.2); }
     </style>
 </head>
 <body>
@@ -59,8 +83,8 @@
         <h2>📚 Base articles (database.xlsx)</h2>
         <input type="file" id="databaseFile" accept=".xlsx, .xls">
         <div class="btn-group">
-            <button class="btn btn-gold" onclick="uploadBase('database', 'replace')">Remplacer</button>
-            <button class="btn btn-outline" onclick="uploadBase('database', 'append')">Ajouter des produits</button>
+            <button class="btn btn-gold" onclick="handleUpload('database', 'replace')">Remplacer</button>
+            <button class="btn btn-outline" onclick="handleUpload('database', 'append')">Ajouter des produits</button>
         </div>
         <div id="db-message" class="message"></div>
     </div>
@@ -69,18 +93,43 @@
         <h2>📋 Cadenceur (CADENCIER.xlsx)</h2>
         <input type="file" id="cadencierFile" accept=".xlsx, .xls">
         <div class="btn-group">
-            <button class="btn btn-gold" onclick="uploadBase('cadencier', 'replace')">Remplacer</button>
-            <button class="btn btn-outline" onclick="uploadBase('cadencier', 'append')">Ajouter des produits</button>
+            <button class="btn btn-gold" onclick="handleUpload('cadencier', 'replace')">Remplacer</button>
+            <button class="btn btn-outline" onclick="handleUpload('cadencier', 'append')">Ajouter des produits</button>
         </div>
         <div id="cad-message" class="message"></div>
     </div>
 </div>
 
+<!-- Modal de mapping (pour l'ajout) -->
+<div id="mappingModal" class="modal">
+    <div class="modal-content">
+        <h3>📋 Associer les colonnes</h3>
+        <p>Le fichier ne contient pas les en-têtes attendus. Veuillez indiquer la correspondance.</p>
+        <div id="sampleContainerMapping"></div>
+        <div id="mappingFields"></div>
+        <div class="btn-group" style="justify-content: center; margin-top: 20px;">
+            <button class="btn btn-gold" onclick="applyMappingAndUpload()">Valider et ajouter</button>
+            <button class="btn btn-outline" onclick="closeMappingModal()">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation de remplacement -->
+<div id="replaceConfirmModal" class="modal">
+    <div class="modal-content">
+        <h3>⚠️ Confirmer le remplacement</h3>
+        <p>Vous allez remplacer <strong id="replaceFileName"></strong> par le fichier suivant. Voici un aperçu des 5 premières lignes :</p>
+        <div id="replaceSampleContainer"></div>
+        <div class="btn-group" style="justify-content: center; margin-top: 20px;">
+            <button class="btn btn-gold" onclick="confirmReplaceAndUpload()">Confirmer le remplacement</button>
+            <button class="btn btn-outline" onclick="closeReplaceConfirmModal()">Annuler</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // Vérification simple de session (stockée en sessionStorage)
-    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
-        showAdmin();
-    }
+    // ---- Authentification ----
+    if (sessionStorage.getItem('adminAuthenticated') === 'true') showAdmin();
 
     async function checkPassword() {
         const password = document.getElementById('passwordInput').value;
@@ -110,7 +159,11 @@
         document.getElementById('admin-content').style.display = 'block';
     }
 
-    async function uploadBase(type, mode) {
+    // ---- Gestion de l'upload ----
+    let pendingMapping = null;
+    let pendingReplace = null; // pour le mode replace
+
+    async function handleUpload(type, mode) {
         const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
         const file = fileInput.files[0];
@@ -120,6 +173,229 @@
             return;
         }
 
+        if (mode === 'replace') {
+            // Lire le fichier pour la prévisualisation
+            try {
+                const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                if (rows.length === 0) throw new Error('Fichier vide');
+                // Afficher le modal de confirmation avec aperçu
+                openReplaceConfirmModal(type, file, rows);
+            } catch(e) {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur de lecture du fichier : ' + e.message;
+            }
+        } else {
+            // Mode append (ajout) : logique existante avec mapping intelligent
+            try {
+                const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                if (rows.length === 0) throw new Error('Fichier vide');
+
+                const targetColumns = type === 'database' 
+                    ? ['Code barre', 'Code article', 'Désignation'] 
+                    : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
+
+                const headerRow = rows[0];
+                const hasHeader = headerRow.some(cell => {
+                    const val = (cell || '').toString().toLowerCase().trim();
+                    return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
+                });
+
+                if (hasHeader) {
+                    const detected = detectHeaderIndices(headerRow, targetColumns);
+                    const missing = targetColumns.filter(col => !(col in detected));
+                    if (missing.length === 0) {
+                        await uploadFile(type, file, 'append', null, msgEl);
+                    } else {
+                        openMappingModal(type, file, rows, targetColumns);
+                    }
+                } else {
+                    openMappingModal(type, file, rows, targetColumns);
+                }
+            } catch(e) {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur de lecture du fichier : ' + e.message;
+            }
+        }
+    }
+
+    // ---- Mode remplacement : prévisualisation ----
+    function openReplaceConfirmModal(type, file, rows) {
+        pendingReplace = { type, file, rows };
+        const fileName = type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx';
+        document.getElementById('replaceFileName').textContent = fileName;
+
+        // Afficher les 5 premières lignes dans un tableau
+        const sampleCount = Math.min(5, rows.length);
+        let html = '<table class="sample-table"><thead><tr>';
+        // Déterminer le nombre maximum de colonnes sur l'échantillon
+        const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0);
+        // Utiliser la première ligne comme en-tête si elle contient des mots-clés, sinon "Colonne 1", etc.
+        const firstRow = rows[0];
+        const hasHeader = firstRow && firstRow.some(cell => {
+            const val = (cell || '').toString().toLowerCase().trim();
+            return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
+        });
+        if (hasHeader) {
+            for (let c = 0; c < maxCols; c++) {
+                html += `<th>${escapeHtml(firstRow[c] || '')}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+            for (let r = 1; r < sampleCount; r++) {
+                html += '<tr>';
+                for (let c = 0; c < maxCols; c++) {
+                    html += `<td>${escapeHtml(rows[r] ? (rows[r][c] || '') : '')}</td>`;
+                }
+                html += '</tr>';
+            }
+        } else {
+            for (let c = 0; c < maxCols; c++) {
+                html += `<th>Colonne ${c+1}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+            for (let r = 0; r < sampleCount; r++) {
+                html += '<tr>';
+                for (let c = 0; c < maxCols; c++) {
+                    html += `<td>${escapeHtml(rows[r] ? (rows[r][c] || '') : '')}</td>`;
+                }
+                html += '</tr>';
+            }
+        }
+        html += '</tbody></table>';
+        document.getElementById('replaceSampleContainer').innerHTML = html;
+        document.getElementById('replaceConfirmModal').classList.add('open');
+    }
+
+    function closeReplaceConfirmModal() {
+        document.getElementById('replaceConfirmModal').classList.remove('open');
+        pendingReplace = null;
+    }
+
+    async function confirmReplaceAndUpload() {
+        if (!pendingReplace) return;
+        const { type, file } = pendingReplace;
+        const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
+        await uploadFile(type, file, 'replace', null, msgEl);
+        closeReplaceConfirmModal();
+    }
+
+    // ---- Utilitaires pour le mapping (mode append) ----
+    function detectHeaderIndices(headerRow, targetColumns) {
+        const indices = {};
+        const cleanHeader = headerRow.map(c => (c || '').toString().toLowerCase().trim());
+        targetColumns.forEach(col => {
+            const idx = cleanHeader.findIndex(c => c.includes(col.toLowerCase()));
+            if (idx !== -1) indices[col] = idx;
+        });
+        return indices;
+    }
+
+    function openMappingModal(type, file, rows, targetColumns) {
+        pendingMapping = { type, file, rows, targetColumns, fileObj: file };
+        const sampleCount = Math.min(5, rows.length);
+        let html = '<table class="sample-table"><thead><tr>';
+        for (let i = 0; i < (rows[0] ? rows[0].length : 0); i++) {
+            html += `<th>Colonne ${i+1}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        for (let r = 0; r < sampleCount; r++) {
+            html += '<tr>';
+            for (let c = 0; c < (rows[r] ? rows[r].length : 0); c++) {
+                html += `<td>${escapeHtml(rows[r][c] || '')}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        document.getElementById('sampleContainerMapping').innerHTML = html;
+
+        const selectOptions = Array.from({ length: (rows[0] ? rows[0].length : 0) }, (_, i) => `<option value="${i}">Colonne ${i+1}</option>`);
+        selectOptions.unshift('<option value="-1">-- Ignorer --</option>');
+
+        let fieldsHtml = '';
+        targetColumns.forEach(col => {
+            fieldsHtml += `<div class="mapping-row">
+                <label style="width: 120px;">${col} :</label>
+                <select id="map_${col.replace(/\s/g,'')}">${selectOptions.join('')}</select>
+            </div>`;
+        });
+        document.getElementById('mappingFields').innerHTML = fieldsHtml;
+
+        // Présélection automatique
+        if (rows.length > 0) {
+            const header = rows[0];
+            const detected = detectHeaderIndices(header, targetColumns);
+            targetColumns.forEach(col => {
+                const sel = document.getElementById('map_' + col.replace(/\s/g,''));
+                if (sel && detected[col] !== undefined) {
+                    sel.value = detected[col];
+                }
+            });
+        }
+
+        document.getElementById('mappingModal').classList.add('open');
+    }
+
+    function closeMappingModal() {
+        document.getElementById('mappingModal').classList.remove('open');
+        pendingMapping = null;
+    }
+
+    async function applyMappingAndUpload() {
+        if (!pendingMapping) return;
+        const { type, rows, targetColumns, fileObj } = pendingMapping;
+        const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
+
+        const mapping = {};
+        targetColumns.forEach(col => {
+            const sel = document.getElementById('map_' + col.replace(/\s/g,''));
+            if (sel && sel.value !== '-1') {
+                mapping[col] = parseInt(sel.value);
+            }
+        });
+
+        const missing = targetColumns.filter(col => !(col in mapping));
+        if (missing.length > 0) {
+            alert('Veuillez associer toutes les colonnes obligatoires : ' + missing.join(', '));
+            return;
+        }
+
+        try {
+            const newWorkbook = XLSX.utils.book_new();
+            const newRows = [];
+            newRows.push(targetColumns);
+
+            const dataStart = rows.length > 0 && rows[0].some(cell => {
+                const val = (cell || '').toString().toLowerCase().trim();
+                return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
+            }) ? 1 : 0;
+
+            for (let r = dataStart; r < rows.length; r++) {
+                const row = rows[r];
+                const newRow = targetColumns.map(col => {
+                    const idx = mapping[col];
+                    return (idx !== undefined && row[idx] !== undefined) ? row[idx] : '';
+                });
+                newRows.push(newRow);
+            }
+
+            const newSheet = XLSX.utils.aoa_to_sheet(newRows);
+            XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Feuille1');
+            const newBuffer = XLSX.write(newWorkbook, { type: 'array', bookType: 'xlsx' });
+            const newBlob = new Blob([newBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            await uploadFile(type, newBlob, 'append', null, msgEl);
+            closeMappingModal();
+        } catch(e) {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur lors de la reconstruction du fichier : ' + e.message;
+        }
+    }
+
+    // ---- Fonction générique d'upload ----
+    async function uploadFile(type, file, mode, mapping, msgEl) {
         msgEl.className = 'message';
         msgEl.textContent = 'Envoi en cours...';
         msgEl.style.display = 'block';
@@ -137,8 +413,6 @@
                         mode: mode
                     })
                 });
-
-                // Tenter de lire la réponse en JSON, sinon afficher le texte brut
                 let result;
                 const contentType = resp.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
@@ -147,7 +421,6 @@
                     const text = await resp.text();
                     throw new Error('Réponse inattendue du serveur : ' + text.slice(0, 200));
                 }
-
                 if (resp.ok && result.success) {
                     msgEl.className = 'message success';
                     msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
@@ -165,6 +438,10 @@
             msgEl.textContent = 'Erreur de lecture du fichier.';
         };
         reader.readAsDataURL(file);
+    }
+
+    function escapeHtml(text) {
+        return String(text).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
     }
 </script>
 </body>
