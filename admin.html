@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - BOTAKI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy-deep: #131c42;
+            --navy: #1e2f6b;
+            --gold: #f4b400;
+            --gold-light: #ffd54f;
+            --ink: #f5f6fb;
+        }
+        body {
+            margin: 0; font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--navy-deep), var(--navy));
+            color: var(--ink); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;
+        }
+        .admin-container { max-width: 600px; width: 100%; }
+        .card {
+            background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
+            border: 1px solid rgba(244,180,0,0.2); border-radius: 20px; padding: 24px; margin-bottom: 20px;
+        }
+        h2 { color: var(--gold-light); margin: 0 0 16px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
+        input[type="file"] { width: 100%; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 12px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: 0.2s;
+        }
+        .btn-gold { background: var(--gold); color: var(--navy-deep); }
+        .btn-gold:hover { background: var(--gold-light); }
+        .btn-outline { background: transparent; border: 1px solid rgba(244,180,0,0.4); color: var(--gold-light); }
+        .btn-outline:hover { background: rgba(244,180,0,0.1); }
+        .message { padding: 8px 12px; border-radius: 8px; margin-top: 10px; font-size: 0.9rem; display: none; }
+        .message.success { background: rgba(16,185,129,0.2); color: #10b981; display: block; }
+        .message.error { background: rgba(239,68,68,0.2); color: #ef4444; display: block; }
+        #login-message { text-align: center; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+<div class="admin-container" id="login-block">
+    <div class="card" style="text-align: center;">
+        <h2>🔐 Administration BOTAKI</h2>
+        <p style="margin-bottom: 20px;">Veuillez entrer le mot de passe pour accéder à cette page.</p>
+        <input type="password" id="passwordInput" placeholder="Mot de passe" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;">
+        <button class="btn btn-gold" onclick="checkPassword()">Valider</button>
+        <div id="login-message" class="message"></div>
+    </div>
+</div>
+
+<div class="admin-container" id="admin-content" style="display: none;">
+    <div class="card">
+        <h2>📚 Base articles (database.xlsx)</h2>
+        <input type="file" id="databaseFile" accept=".xlsx, .xls">
+        <div class="btn-group">
+            <button class="btn btn-gold" onclick="uploadBase('database', 'replace')">Remplacer</button>
+            <button class="btn btn-outline" onclick="uploadBase('database', 'append')">Ajouter des produits</button>
+        </div>
+        <div id="db-message" class="message"></div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Cadenceur (CADENCIER.xlsx)</h2>
+        <input type="file" id="cadencierFile" accept=".xlsx, .xls">
+        <div class="btn-group">
+            <button class="btn btn-gold" onclick="uploadBase('cadencier', 'replace')">Remplacer</button>
+            <button class="btn btn-outline" onclick="uploadBase('cadencier', 'append')">Ajouter des produits</button>
+        </div>
+        <div id="cad-message" class="message"></div>
+    </div>
+</div>
+
+<script>
+    // Vérification simple de session (stockée en sessionStorage)
+    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
+        showAdmin();
+    }
+
+    async function checkPassword() {
+        const password = document.getElementById('passwordInput').value;
+        const msgEl = document.getElementById('login-message');
+        try {
+            const resp = await fetch('/api/check-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                sessionStorage.setItem('adminAuthenticated', 'true');
+                showAdmin();
+            } else {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Mot de passe incorrect.';
+            }
+        } catch(e) {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur de connexion.';
+        }
+    }
+
+    function showAdmin() {
+        document.getElementById('login-block').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+    }
+
+    async function uploadBase(type, mode) {
+        const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
+        const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
+        const file = fileInput.files[0];
+        if (!file) {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Veuillez sélectionner un fichier.';
+            return;
+        }
+
+        msgEl.className = 'message';
+        msgEl.textContent = 'Envoi en cours...';
+        msgEl.style.display = 'block';
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result.split(',')[1];
+            try {
+                const resp = await fetch('/api/upload-base', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileBase64: base64,
+                        fileName: type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx',
+                        mode: mode
+                    })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    msgEl.className = 'message success';
+                    msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
+                } else {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'Erreur : ' + (result.error || 'inconnue');
+                }
+            } catch(ex) {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur réseau.';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+</body>
+</html>
