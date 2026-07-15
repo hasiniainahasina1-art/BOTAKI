@@ -1,30 +1,42 @@
 import ExcelJS from 'exceljs';
 
-// Définition des colonnes attendues pour chaque type de fichier
+// Colonnes attendues pour chaque type de fichier
 const FILE_STRUCTURE = {
     'database.xlsx': ['Code barre', 'Code article', 'Désignation'],
     'CADENCIER.xlsx': ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur']
 };
 
-// Alias pour la détection des en-têtes (ordonnés du plus précis au moins précis)
+// Alias très précis pour éviter les confusions
 const COLUMN_ALIASES = {
     'Code barre': ['code barre', 'code-barre', 'codebarre', 'ean', 'codebar'],
-    'Code article': ['code article', 'codearticle', 'ref', 'reference'],
-    'Désignation': ['designation', 'libellé', 'libelle', 'des', 'produit', 'article'],
+    'Code article': ['code article', 'codearticle', 'ref', 'reference', 'art'],   // 'art' est volontairement gardé court pour ne pas être confondu
+    'Désignation': ['designation', 'désignation', 'libelle', 'libellé', 'description', 'nom', 'produit', 'design'],
     'PCB': ['pcb', 'prix unitaire', 'prix'],
     'Fournisseur': ['fournisseur', 'fourn.', 'fourn', 'supplier']
 };
 
 /**
- * Détecte les indices des colonnes cibles dans une ligne d'en-tête.
- * Garantit qu'une colonne source ne peut être attribuée qu'à une seule colonne cible.
+ * Nettoie une chaîne : minuscule, sans accent, sans espaces superflus.
+ */
+function normalize(str) {
+    return str
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+}
+
+/**
+ * Détecte les indices des colonnes cibles.
+ * - Une colonne source ne peut être attribuée qu'à UNE SEULE colonne cible.
+ * - Les correspondances les plus longues sont privilégiées.
  */
 function detectHeaderIndices(headerRow, targetColumns) {
     const indices = {};
     const usedSourceIndices = new Set();
-    const clean = headerRow.map(c => (c || '').toString().toLowerCase().trim());
+    const clean = headerRow.map(cell => normalize(cell || ''));
 
-    // Pour chaque colonne cible, on cherche la meilleure correspondance non déjà utilisée
     for (const col of targetColumns) {
         const aliases = COLUMN_ALIASES[col] || [col.toLowerCase()];
         let bestIdx = -1;
@@ -32,16 +44,17 @@ function detectHeaderIndices(headerRow, targetColumns) {
 
         for (let i = 0; i < clean.length; i++) {
             if (usedSourceIndices.has(i)) continue; // déjà prise
+
             const cell = clean[i];
             for (const alias of aliases) {
-                if (cell.includes(alias)) {
-                    // score = longueur de l'alias (préfère les correspondances plus longues)
+                // On vérifie si la cellule contient l'alias (correspondance exacte ou en tant que mot)
+                if (cell === alias || cell.includes(alias)) {
                     const score = alias.length;
                     if (score > bestScore) {
                         bestScore = score;
                         bestIdx = i;
                     }
-                    break; // on ne teste pas les autres alias pour cette cellule si on a un match
+                    break; // on passe à la colonne suivante
                 }
             }
         }
@@ -56,8 +69,7 @@ function detectHeaderIndices(headerRow, targetColumns) {
 }
 
 /**
- * Réorganise un fichier Excel (en base64) pour qu'il ait exactement les colonnes
- * cibles dans l'ordre standard.
+ * Réorganise un fichier Excel (base64) pour qu'il ait exactement les colonnes cibles.
  */
 async function reorganizeExcel(base64, targetColumns) {
     const buffer = Buffer.from(base64, 'base64');
@@ -67,8 +79,6 @@ async function reorganizeExcel(base64, targetColumns) {
 
     const rows = [];
     ws.eachRow({ includeEmpty: true }, (row) => {
-        // row.values est un tableau où l'index 1 correspond à la colonne A, etc.
-        // On récupère toutes les valeurs à partir de l'index 1
         const vals = [];
         for (let i = 1; i < row.values.length; i++) {
             vals.push(row.values[i] !== undefined ? row.values[i] : '');
@@ -79,17 +89,20 @@ async function reorganizeExcel(base64, targetColumns) {
 
     const headerRow = rows[0];
     const hasHeader = headerRow.some(cell => {
-        const val = (cell || '').toString().toLowerCase().trim();
-        return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
+        const v = normalize(cell || '');
+        return ['code', 'barre', 'article', 'design', 'produit', 'nom', 'libell', 'pcb', 'fourn'].some(k => v.includes(k));
     });
-    if (!hasHeader) throw new Error('Le fichier doit contenir une ligne d\'en-tête avec les noms de colonnes.');
+    if (!hasHeader) throw new Error('Le fichier doit contenir une ligne d\'en-tête.');
 
     const colMap = detectHeaderIndices(headerRow, targetColumns);
     const missing = targetColumns.filter(col => !(col in colMap));
-    if (missing.length > 0) throw new Error(`Colonnes manquantes : ${missing.join(', ')}`);
+    if (missing.length > 0) {
+        const found = headerRow.join(', ');
+        throw new Error(`Colonnes manquantes : ${missing.join(', ')}. En-têtes trouvés : ${found}`);
+    }
 
-    // Réorganiser les lignes
-    const newRows = [targetColumns]; // nouvelle en-tête
+    // Réorganiser
+    const newRows = [targetColumns];
     for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
         const newRow = targetColumns.map(col => {
@@ -99,7 +112,6 @@ async function reorganizeExcel(base64, targetColumns) {
         newRows.push(newRow);
     }
 
-    // Créer un nouveau workbook
     const newWorkbook = new ExcelJS.Workbook();
     const newWs = newWorkbook.addWorksheet(ws.name);
     newRows.forEach(row => newWs.addRow(row));
@@ -107,6 +119,7 @@ async function reorganizeExcel(base64, targetColumns) {
     return outBuffer.toString('base64');
 }
 
+// --- Handler principal ---
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
 
@@ -129,21 +142,19 @@ export default async function handler(req, res) {
         const targetColumns = FILE_STRUCTURE[fileName];
         if (!targetColumns) return res.status(400).json({ error: 'Type de fichier inconnu' });
 
-        // --- Mode REMPLACEMENT : on réorganise toujours ---
+        // --- REMPLACEMENT ---
         if (mode === 'replace') {
             const finalBase64 = await reorganizeExcel(fileBase64, targetColumns);
             await commitFile(token, repoOwner, repoName, filePath, finalBase64, `Mise à jour ${fileName}`);
             return res.status(200).json({ success: true });
         }
-
-        // --- Mode AJOUT : fusion avec l'existant ---
+        // --- AJOUT ---
         else if (mode === 'append') {
             const existingBuffer = await getFileContent(token, repoOwner, repoName, filePath);
             if (!existingBuffer) {
                 return res.status(404).json({ error: 'Fichier existant introuvable' });
             }
 
-            // Réorganiser d'abord le nouveau fichier pour qu'il ait les mêmes colonnes dans le même ordre
             const finalBase64 = await reorganizeExcel(fileBase64, targetColumns);
 
             const oldWorkbook = new ExcelJS.Workbook();
@@ -167,7 +178,6 @@ export default async function handler(req, res) {
                 newRows.push(vals);
             });
 
-            // Les deux fichiers ont maintenant la même en-tête (targetColumns)
             const header = oldRows[0];
             const oldBody = oldRows.slice(1);
             const newBody = newRows.slice(1);
@@ -191,7 +201,7 @@ export default async function handler(req, res) {
     }
 }
 
-// --- Fonctions GitHub (inchangées) ---
+// --- Fonctions GitHub ---
 async function getFileContent(token, owner, repo, path) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
     const resp = await fetch(url, { headers: { Authorization: `token ${token}` } });
