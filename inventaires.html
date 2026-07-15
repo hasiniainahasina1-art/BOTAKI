@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archives Inventaires - BOTAKI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #1e2f6b;
+            --gold: #f4b400;
+            --gold-light: #ffd54f;
+            --ink: #f5f6fb;
+        }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e2f6b);
+            color: var(--ink);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        h1 { color: var(--gold-light); text-align: center; }
+        .categories { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+        .cat-btn {
+            padding: 0.8rem 1.5rem;
+            background: var(--gold);
+            color: #1e2f6b;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .cat-btn.active { background: var(--gold-light); transform: scale(1.05); }
+        .file-list { max-width: 600px; margin: 0 auto; }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.5rem;
+            backdrop-filter: blur(5px);
+        }
+        .file-item a { color: var(--gold-light); text-decoration: none; font-weight: 500; }
+        .search-box { margin-bottom: 1rem; text-align: center; }
+        .search-box input {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--gold);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            width: 80%;
+            max-width: 300px;
+        }
+        footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #a9b3d6; }
+        .info-message { text-align: center; padding: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>📦 Inventaires BOTAKI</h1>
+    <p style="text-align:center; color: var(--gold-light);">Consultez vos inventaires par catégorie</p>
+    <div class="categories">
+        <button class="cat-btn active" data-cat="Epicerie">Épicerie</button>
+        <button class="cat-btn" data-cat="BAZARD">BAZARD</button>
+        <button class="cat-btn" data-cat="Boisson">Boisson</button>
+    </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Rechercher un fichier...">
+    </div>
+    <div class="file-list" id="fileList">
+        <p class="info-message">⏳ Chargement...</p>
+    </div>
+    <footer>Fichiers hébergés sur GitHub – BOTAKI</footer>
+
+    <script>
+        const REPO_OWNER = 'hasiniainahasina1-art'; // À modifier si nécessaire
+        const REPO_NAME = 'BOTAKI';
+        const BASE_PATH = 'inventaires'; // dossier racine dans le dépôt
+
+        let currentCategory = 'Epicerie';
+        const listEl = document.getElementById('fileList');
+        const searchInput = document.getElementById('searchInput');
+        const catButtons = document.querySelectorAll('.cat-btn');
+
+        async function fetchFiles(category) {
+            const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${BASE_PATH}/${category}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return []; // dossier vide ou inexistant
+                const data = await response.json();
+                return Array.isArray(data) ? data : [];
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function renderFiles(files, searchTerm = '') {
+            let filtered = files;
+            if (searchTerm) {
+                filtered = files.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            }
+            if (!filtered.length) {
+                listEl.innerHTML = '<p class="info-message">Aucun fichier trouvé dans ce dossier.</p>';
+                return;
+            }
+            listEl.innerHTML = filtered.map(f => `
+                <div class="file-item">
+                    <span>${f.name.replace('.xlsx', '')}</span>
+                    <a href="${f.download_url}" download>📥 Télécharger</a>
+                </div>
+            `).join('');
+        }
+
+        async function loadCategory(cat) {
+            currentCategory = cat;
+            listEl.innerHTML = '<p class="info-message">⏳ Chargement des fichiers...</p>';
+            const files = await fetchFiles(cat);
+            renderFiles(files, searchInput.value);
+        }
+
+        catButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                catButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                loadCategory(btn.dataset.cat);
+            });
+        });
+
+        searchInput.addEventListener('input', async () => {
+            const files = await fetchFiles(currentCategory);
+            renderFiles(files, searchInput.value);
+        });
+
+        // Chargement initial
+        loadCategory('Epicerie');
+    </script>
+</body>
+</html>
