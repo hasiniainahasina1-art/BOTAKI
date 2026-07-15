@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* (style identique à la version précédente) */
         :root {
             --navy-deep: #131c42;
             --navy: #1e2f6b;
@@ -396,8 +397,8 @@
                 <input type="text" id="designationInput" class="designation-readonly" readonly placeholder="Auto-recherche" autocomplete="off">
             </div>
             <div class="field-group" style="max-width: 100px;">
-                <label>📦 Quantité</label>
-                <input type="number" id="quantiteInput" value="1" min="1" step="1" inputmode="numeric">
+                <label>📦 Quantité *</label>
+                <input type="number" id="quantiteInput" value="" min="1" step="1" inputmode="numeric" placeholder="Qté" required>
             </div>
         </div>
         <div style="display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
@@ -439,7 +440,7 @@
         <h3>⚠️ Code introuvable</h3>
         <p>Vérifiez bien que ce code article ou code barre est valide :<br><strong id="modalCodeDisplay" style="color: var(--gold-light);"></strong></p>
         <label style="font-size:0.8rem; color: var(--ink-muted);">Quantité (obligatoire)</label>
-        <input type="number" id="modalQuantite" min="1" value="1" step="1" inputmode="numeric">
+        <input type="number" id="modalQuantite" min="1" value="" step="1" inputmode="numeric" placeholder="Quantité" required>
         <div class="modal-buttons">
             <button class="btn btn-outline" id="cancelModalBtn">Annuler</button>
             <button class="btn btn-gold" id="confirmModalBtn">Enregistrer</button>
@@ -619,7 +620,7 @@
             designationInput.value = '';
             designationInput.classList.remove('designation-editable');
             designationInput.readOnly = true;
-            quantiteInput.value = '1';
+            quantiteInput.value = '';   // vide
             dernierProduitValide = null;
             addBtn.disabled = true;
             codeInput.classList.remove('valid', 'invalid');
@@ -674,7 +675,7 @@
                     addBtn.disabled = false;
                 }
             }
-            quantiteInput.value = ligne.quantite;
+            quantiteInput.value = ligne.quantite;  // on remplit avec l'ancienne quantité
             inventaire.lignes.splice(index, 1);
             sauvegarder();
             renderTable();
@@ -791,10 +792,21 @@
             return true;
         }
 
+        // Validation de la quantité (utilisée pour le formulaire principal et la modale)
+        function validerQuantite(valeur) {
+            const qte = parseInt(valeur, 10);
+            if (isNaN(qte) || qte < 1) {
+                alert('Veuillez entrer une quantité valide (nombre entier supérieur à 0).');
+                return false;
+            }
+            return qte;
+        }
+
         function gererAjout() {
             if (dernierProduitValide) {
-                let qte = parseInt(quantiteInput.value, 10);
-                if (isNaN(qte) || qte < 1) qte = 1;
+                // Article trouvé dans la base
+                const qte = validerQuantite(quantiteInput.value);
+                if (!qte) return;
                 preparerAjout(
                     dernierProduitValide.codeBarre,
                     dernierProduitValide.codeArticle,
@@ -803,10 +815,11 @@
                     false
                 );
             } else {
+                // Code non trouvé -> modale hors base
                 const codeSaisi = codeInput.value.trim();
                 if (!codeSaisi) return;
                 modalCodeDisplay.textContent = codeSaisi;
-                modalQuantite.value = quantiteInput.value || 1;
+                modalQuantite.value = ''; // vide
                 horsBaseModal.classList.add('open');
             }
         }
@@ -816,11 +829,9 @@
         }
 
         function enregistrerHorsBase() {
-            const qte = parseInt(modalQuantite.value, 10);
-            if (isNaN(qte) || qte < 1) {
-                alert('Veuillez entrer une quantité valide (minimum 1).');
-                return;
-            }
+            const qte = validerQuantite(modalQuantite.value);
+            if (!qte) return;
+
             const codeSaisi = codeInput.value.trim();
             let codeBarre = '', codeArticle = '';
             if (/^\d{8}$/.test(codeSaisi)) codeArticle = codeSaisi;
