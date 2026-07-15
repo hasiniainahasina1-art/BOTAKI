@@ -38,6 +38,9 @@
         .message.success { background: rgba(16,185,129,0.2); color: #10b981; display: block; }
         .message.error { background: rgba(239,68,68,0.2); color: #ef4444; display: block; }
         #login-message { text-align: center; margin-bottom: 16px; }
+        input[type="password"] {
+            width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;
+        }
     </style>
 </head>
 <body>
@@ -45,7 +48,7 @@
     <div class="card" style="text-align: center;">
         <h2>🔐 Administration BOTAKI</h2>
         <p style="margin-bottom: 20px;">Veuillez entrer le mot de passe pour accéder à cette page.</p>
-        <input type="password" id="passwordInput" placeholder="Mot de passe" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;">
+        <input type="password" id="passwordInput" placeholder="Mot de passe">
         <button class="btn btn-gold" onclick="checkPassword()">Valider</button>
         <div id="login-message" class="message"></div>
     </div>
@@ -134,18 +137,32 @@
                         mode: mode
                     })
                 });
-                const result = await resp.json();
-                if (result.success) {
+
+                // Tenter de lire la réponse en JSON, sinon afficher le texte brut
+                let result;
+                const contentType = resp.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    result = await resp.json();
+                } else {
+                    const text = await resp.text();
+                    throw new Error('Réponse inattendue du serveur : ' + text.slice(0, 200));
+                }
+
+                if (resp.ok && result.success) {
                     msgEl.className = 'message success';
                     msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
                 } else {
                     msgEl.className = 'message error';
-                    msgEl.textContent = 'Erreur : ' + (result.error || 'inconnue');
+                    msgEl.textContent = 'Erreur : ' + (result.error || 'Erreur inconnue');
                 }
             } catch(ex) {
                 msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur réseau.';
+                msgEl.textContent = 'Erreur réseau : ' + ex.message;
             }
+        };
+        reader.onerror = () => {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur de lecture du fichier.';
         };
         reader.readAsDataURL(file);
     }
