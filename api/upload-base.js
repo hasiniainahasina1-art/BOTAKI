@@ -1,12 +1,12 @@
 import ExcelJS from 'exceljs';
 
-// Colonnes attendues pour chaque type de fichier
+// Colonnes attendues
 const FILE_STRUCTURE = {
     'database.xlsx': ['Code barre', 'Code article', 'Désignation'],
     'CADENCIER.xlsx': ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur']
 };
 
-// Alias pour la détection des en-têtes
+// Alias de détection
 const COLUMN_ALIASES = {
     'Code barre': ['code barre', 'code-barre', 'codebarre', 'ean', 'codebar'],
     'Code article': ['code article', 'codearticle', 'ref', 'reference', 'art'],
@@ -15,9 +15,6 @@ const COLUMN_ALIASES = {
     'Fournisseur': ['fournisseur', 'fourn.', 'fourn', 'supplier']
 };
 
-/**
- * Nettoie une chaîne : minuscule, sans accent.
- */
 function normalize(str) {
     return str
         .toString()
@@ -27,9 +24,6 @@ function normalize(str) {
         .trim();
 }
 
-/**
- * Détecte les indices des colonnes cibles dans l'en-tête.
- */
 function detectHeaderIndices(headerRow, targetColumns) {
     const indices = {};
     const usedSourceIndices = new Set();
@@ -64,9 +58,6 @@ function detectHeaderIndices(headerRow, targetColumns) {
     return indices;
 }
 
-/**
- * Réorganise un fichier Excel (base64) pour qu'il ait exactement les colonnes cibles.
- */
 async function reorganizeExcel(base64, targetColumns) {
     const buffer = Buffer.from(base64, 'base64');
     const workbook = new ExcelJS.Workbook();
@@ -97,7 +88,6 @@ async function reorganizeExcel(base64, targetColumns) {
         throw new Error(`Colonnes manquantes : ${missing.join(', ')}. En-têtes trouvés : ${found}`);
     }
 
-    // Réorganiser
     const newRows = [targetColumns];
     for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
@@ -116,32 +106,33 @@ async function reorganizeExcel(base64, targetColumns) {
 }
 
 /**
- * Fusionne les lignes du nouveau fichier dans les anciennes.
- * - indexCol : le nom de la colonne servant d'identifiant ('Code article' par défaut, sinon 'Code barre')
- * - Retourne { mergedRows, addedCount }
+ * Fusion intelligente :
+ * - Identifie les produits par Code article, sinon Code barre.
+ * - Met à jour les champs vides des produits existants.
+ * - Ajoute les nouveaux produits.
+ * Retourne { mergedRows, addedCount, updatedCount }.
  */
 function mergeProducts(oldRows, newRows, targetColumns) {
-    // oldRows[0] et newRows[0] sont les en-têtes (identiques)
     const header = oldRows[0];
     const oldData = oldRows.slice(1);
     const newData = newRows.slice(1);
 
-    // Trouver l'index de la colonne d'identification
-    let idColIndex = targetColumns.indexOf('Code article');
-    if (idColIndex === -1) idColIndex = targetColumns.indexOf('Code barre');
-    // Colonne de secours : Code barre
-    let idColIndex2 = targetColumns.indexOf('Code barre');
-    if (idColIndex2 === idColIndex) idColIndex2 = -1;
+    // Indices des colonnes clés
+    const idxCodeArticle = targetColumns.indexOf('Code article');
+    const idxCodeBarre = targetColumns.indexOf('Code barre');
 
-    // Créer un dictionnaire des lignes existantes indexées par l'identifiant
-    const existingMap = new Map(); // clé -> objet { row, index }
+    // Dictionnaire pour retrouver rapidement les anciens produits par leur identifiant
+    const existingMap = new Map(); // clé -> { row, index }
     oldData.forEach((row, idx) => {
-        let key = (row[idColIndex] || '').toString().trim();
-        if (!key && idColIndex2 !== -1) {
-            key = (row[idColIndex2] || '').toString().trim();
+        let key = '';
+        if (idxCodeArticle !== -1) {
+            key = (row[idxCodeArticle] || '').toString().trim();
+        }
+        if (!key && idxCodeBarre !== -1) {
+            key = (row[idxCodeBarre] || '').toString().trim();
         }
         if (key) {
-            // Si plusieurs lignes ont la même clé, on ne garde que la première (on pourrait fusionner aussi)
+            // Si une clé existe déjà, on ne l'écrase pas (on garde la première occurrence)
             if (!existingMap.has(key)) {
                 existingMap.set(key, { row, index: idx });
             }
@@ -149,27 +140,36 @@ function mergeProducts(oldRows, newRows, targetColumns) {
     });
 
     let addedCount = 0;
+    let updatedCount = 0;
 
-    // Parcourir les nouvelles lignes
     for (const newRow of newData) {
-        let key = (newRow[idColIndex] || '').toString().trim();
-        if (!key && idColIndex2 !== -1) {
-            key = (newRow[idColIndex2] || '').toString().trim();
+        // Déterminer la clé du nouveau produit
+        let key = '';
+        if (idxCodeArticle !== -1) {
+            key = (newRow[idxCodeArticle] || '').toString().trim();
+        }
+        if (!key && idxCodeBarre !== -1) {
+            key = (newRow[idxCodeBarre] || '').toString().trim();
         }
 
         if (key && existingMap.has(key)) {
-            // Produit existant : compléter les colonnes vides
+            // Produit existant : compléter les champs vides
             const existing = existingMap.get(key);
             const oldRow = existing.row;
+            let updated = false;
+
             for (let c = 0; c < targetColumns.length; c++) {
                 const oldVal = (oldRow[c] || '').toString().trim();
                 const newVal = (newRow[c] || '').toString().trim();
                 if (!oldVal && newVal) {
-                    oldRow[c] = newRow[c]; // compléter avec la nouvelle valeur
+                    oldRow[c] = newRow[c];
+                    updated = true;
                 }
             }
+
+            if (updated) updatedCount++;
         } else {
-            // Nouveau produit
+            // Nouveau produit : l'ajouter à la fin
             oldData.push(newRow);
             if (key) {
                 existingMap.set(key, { row: newRow, index: oldData.length - 1 });
@@ -180,11 +180,12 @@ function mergeProducts(oldRows, newRows, targetColumns) {
 
     return {
         mergedRows: [header, ...oldData],
-        addedCount
+        addedCount,
+        updatedCount
     };
 }
 
-// --- Handler principal ---
+// --- Handler ---
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
 
@@ -207,29 +208,24 @@ export default async function handler(req, res) {
         const targetColumns = FILE_STRUCTURE[fileName];
         if (!targetColumns) return res.status(400).json({ error: 'Type de fichier inconnu' });
 
-        // --- Mode REMPLACEMENT ---
         if (mode === 'replace') {
             const finalBase64 = await reorganizeExcel(fileBase64, targetColumns);
             await commitFile(token, repoOwner, repoName, filePath, finalBase64, `Mise à jour ${fileName}`);
             return res.status(200).json({ success: true });
         }
-        // --- Mode AJOUT (fusion intelligente) ---
         else if (mode === 'append') {
             const existingBuffer = await getFileContent(token, repoOwner, repoName, filePath);
             if (!existingBuffer) {
                 return res.status(404).json({ error: 'Fichier existant introuvable' });
             }
 
-            // Réorganiser le nouveau fichier
             const finalBase64 = await reorganizeExcel(fileBase64, targetColumns);
 
-            // Charger les deux fichiers
             const oldWorkbook = new ExcelJS.Workbook();
             await oldWorkbook.xlsx.load(existingBuffer);
             const newWorkbook = new ExcelJS.Workbook();
             await newWorkbook.xlsx.load(Buffer.from(finalBase64, 'base64'));
 
-            // Extraire les lignes sous forme de tableaux
             const extractRows = (worksheet) => {
                 const rows = [];
                 worksheet.eachRow({ includeEmpty: true }, (row) => {
@@ -245,18 +241,25 @@ export default async function handler(req, res) {
             const oldRows = extractRows(oldWorkbook.worksheets[0]);
             const newRows = extractRows(newWorkbook.worksheets[0]);
 
-            // Fusionner
-            const { mergedRows, addedCount } = mergeProducts(oldRows, newRows, targetColumns);
+            const { mergedRows, addedCount, updatedCount } = mergeProducts(oldRows, newRows, targetColumns);
 
-            // Écrire le fichier fusionné
             const mergedWorkbook = new ExcelJS.Workbook();
             const ws = mergedWorkbook.addWorksheet(oldWorkbook.worksheets[0].name);
             mergedRows.forEach(row => ws.addRow(row));
             const outBuffer = await mergedWorkbook.xlsx.writeBuffer();
             const content = outBuffer.toString('base64');
-            await commitFile(token, repoOwner, repoName, filePath, content, `Ajout de produits (${addedCount} nouveau(x)) dans ${fileName}`);
 
-            return res.status(200).json({ success: true, added: addedCount });
+            let commitMsg = `Ajout de produits dans ${fileName}`;
+            if (addedCount > 0) commitMsg += ` – ${addedCount} nouveau(x)`;
+            if (updatedCount > 0) commitMsg += ` – ${updatedCount} mis à jour`;
+
+            await commitFile(token, repoOwner, repoName, filePath, content, commitMsg);
+
+            return res.status(200).json({
+                success: true,
+                added: addedCount,
+                updated: updatedCount
+            });
         }
         else {
             return res.status(400).json({ error: 'Mode invalide' });
