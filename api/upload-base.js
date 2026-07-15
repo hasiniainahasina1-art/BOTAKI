@@ -1,12 +1,10 @@
 import ExcelJS from 'exceljs';
 
-// Colonnes attendues
 const FILE_STRUCTURE = {
     'database.xlsx': ['Code barre', 'Code article', 'Désignation'],
     'CADENCIER.xlsx': ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur']
 };
 
-// Alias de détection
 const COLUMN_ALIASES = {
     'Code barre': ['code barre', 'code-barre', 'codebarre', 'ean', 'codebar'],
     'Code article': ['code article', 'codearticle', 'ref', 'reference', 'art'],
@@ -16,292 +14,205 @@ const COLUMN_ALIASES = {
 };
 
 function normalize(str) {
-    return str
-        .toString()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim();
+    return str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
 function detectHeaderIndices(headerRow, targetColumns) {
     const indices = {};
-    const usedSourceIndices = new Set();
+    const used = new Set();
     const clean = headerRow.map(cell => normalize(cell || ''));
 
     for (const col of targetColumns) {
         const aliases = COLUMN_ALIASES[col] || [col.toLowerCase()];
-        let bestIdx = -1;
-        let bestScore = -1;
-
+        let bestIdx = -1, bestScore = -1;
         for (let i = 0; i < clean.length; i++) {
-            if (usedSourceIndices.has(i)) continue;
+            if (used.has(i)) continue;
             const cell = clean[i];
             for (const alias of aliases) {
                 if (cell === alias || cell.includes(alias)) {
                     const score = alias.length;
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestIdx = i;
-                    }
+                    if (score > bestScore) { bestScore = score; bestIdx = i; }
                     break;
                 }
             }
         }
-
-        if (bestIdx !== -1) {
-            indices[col] = bestIdx;
-            usedSourceIndices.add(bestIdx);
-        }
+        if (bestIdx !== -1) { indices[col] = bestIdx; used.add(bestIdx); }
     }
-
     return indices;
 }
 
 async function reorganizeExcel(base64, targetColumns) {
     const buffer = Buffer.from(base64, 'base64');
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    const ws = workbook.worksheets[0];
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer);
+    const ws = wb.worksheets[0];
 
     const rows = [];
-    ws.eachRow({ includeEmpty: true }, (row) => {
+    ws.eachRow({ includeEmpty: true }, row => {
         const vals = [];
-        for (let i = 1; i < row.values.length; i++) {
-            vals.push(row.values[i] !== undefined ? row.values[i] : '');
-        }
+        for (let i = 1; i < row.values.length; i++) vals.push(row.values[i] !== undefined ? row.values[i] : '');
         rows.push(vals);
     });
     if (rows.length === 0) throw new Error('Fichier vide');
 
-    const headerRow = rows[0];
-    const hasHeader = headerRow.some(cell => {
-        const v = normalize(cell || '');
-        return ['code', 'barre', 'article', 'design', 'produit', 'nom', 'libell', 'pcb', 'fourn'].some(k => v.includes(k));
-    });
-    if (!hasHeader) throw new Error('Le fichier doit contenir une ligne d\'en-tête.');
+    const header = rows[0];
+    const hasHeader = header.some(cell => ['code', 'barre', 'article', 'design', 'produit', 'nom', 'libell', 'pcb', 'fourn'].some(k => normalize(cell || '').includes(k)));
+    if (!hasHeader) throw new Error('Aucune ligne d\'en-tête détectée.');
 
-    const colMap = detectHeaderIndices(headerRow, targetColumns);
-    const missing = targetColumns.filter(col => !(col in colMap));
-    if (missing.length > 0) {
-        const found = headerRow.join(', ');
-        throw new Error(`Colonnes manquantes : ${missing.join(', ')}. En-têtes trouvés : ${found}`);
-    }
+    const colMap = detectHeaderIndices(header, targetColumns);
+    const missing = targetColumns.filter(c => !(c in colMap));
+    if (missing.length > 0) throw new Error(`Colonnes manquantes : ${missing.join(', ')}. En-têtes trouvés : ${header.join(', ')}`);
 
     const newRows = [targetColumns];
     for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
-        const newRow = targetColumns.map(col => {
+        newRows.push(targetColumns.map(col => {
             const idx = colMap[col];
             return (idx !== undefined && idx < row.length) ? (row[idx] || '') : '';
-        });
-        newRows.push(newRow);
+        }));
     }
 
-    const newWorkbook = new ExcelJS.Workbook();
-    const newWs = newWorkbook.addWorksheet(ws.name);
-    newRows.forEach(row => newWs.addRow(row));
-    const outBuffer = await newWorkbook.xlsx.writeBuffer();
-    return outBuffer.toString('base64');
+    const outWb = new ExcelJS.Workbook();
+    const outWs = outWb.addWorksheet(ws.name);
+    newRows.forEach(row => outWs.addRow(row));
+    return (await outWb.xlsx.writeBuffer()).toString('base64');
 }
 
 /**
- * Fusion intelligente :
- * - Identifie les produits par Code article, sinon Code barre.
- * - Met à jour les champs vides des produits existants.
+ * Fusionne les données :
+ * - Identifie les produits par Code article (puis Code barre en fallback).
+ * - Met à jour les colonnes vides des produits existants.
  * - Ajoute les nouveaux produits.
- * Retourne { mergedRows, addedCount, updatedCount }.
  */
 function mergeProducts(oldRows, newRows, targetColumns) {
     const header = oldRows[0];
     const oldData = oldRows.slice(1);
     const newData = newRows.slice(1);
 
-    // Indices des colonnes clés
     const idxCodeArticle = targetColumns.indexOf('Code article');
     const idxCodeBarre = targetColumns.indexOf('Code barre');
 
-    // Dictionnaire pour retrouver rapidement les anciens produits par leur identifiant
-    const existingMap = new Map(); // clé -> { row, index }
-    oldData.forEach((row, idx) => {
+    // Normaliser une valeur pour servir de clé
+    const keyOf = (row) => {
         let key = '';
-        if (idxCodeArticle !== -1) {
-            key = (row[idxCodeArticle] || '').toString().trim();
-        }
-        if (!key && idxCodeBarre !== -1) {
-            key = (row[idxCodeBarre] || '').toString().trim();
-        }
-        if (key) {
-            // Si une clé existe déjà, on ne l'écrase pas (on garde la première occurrence)
-            if (!existingMap.has(key)) {
-                existingMap.set(key, { row, index: idx });
-            }
-        }
+        if (idxCodeArticle !== -1) key = normalize(row[idxCodeArticle] || '');
+        if (!key && idxCodeBarre !== -1) key = normalize(row[idxCodeBarre] || '');
+        return key;
+    };
+
+    // Index des anciens produits
+    const existingMap = new Map();
+    oldData.forEach((row, i) => {
+        const k = keyOf(row);
+        if (k) existingMap.set(k, { row, index: i });
     });
 
-    let addedCount = 0;
-    let updatedCount = 0;
+    let added = 0, updated = 0;
 
     for (const newRow of newData) {
-        // Déterminer la clé du nouveau produit
-        let key = '';
-        if (idxCodeArticle !== -1) {
-            key = (newRow[idxCodeArticle] || '').toString().trim();
-        }
-        if (!key && idxCodeBarre !== -1) {
-            key = (newRow[idxCodeBarre] || '').toString().trim();
-        }
-
-        if (key && existingMap.has(key)) {
-            // Produit existant : compléter les champs vides
-            const existing = existingMap.get(key);
-            const oldRow = existing.row;
-            let updated = false;
-
+        const k = keyOf(newRow);
+        if (k && existingMap.has(k)) {
+            // Produit existant : remplir les vides
+            const oldRow = existingMap.get(k).row;
+            let changed = false;
             for (let c = 0; c < targetColumns.length; c++) {
                 const oldVal = (oldRow[c] || '').toString().trim();
                 const newVal = (newRow[c] || '').toString().trim();
                 if (!oldVal && newVal) {
                     oldRow[c] = newRow[c];
-                    updated = true;
+                    changed = true;
                 }
             }
-
-            if (updated) updatedCount++;
+            if (changed) updated++;
         } else {
-            // Nouveau produit : l'ajouter à la fin
+            // Nouveau produit
             oldData.push(newRow);
-            if (key) {
-                existingMap.set(key, { row: newRow, index: oldData.length - 1 });
-            }
-            addedCount++;
+            if (k) existingMap.set(k, { row: newRow, index: oldData.length - 1 });
+            added++;
         }
     }
 
-    return {
-        mergedRows: [header, ...oldData],
-        addedCount,
-        updatedCount
-    };
+    return { mergedRows: [header, ...oldData], added, updated };
 }
 
-// --- Handler ---
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
 
     try {
         const { fileBase64, fileName, mode } = req.body;
-        if (!fileBase64 || !fileName || !mode) {
-            return res.status(400).json({ error: 'Paramètres manquants' });
-        }
+        if (!fileBase64 || !fileName || !mode) return res.status(400).json({ error: 'Paramètres manquants' });
 
         const token = process.env.GITHUB_TOKEN;
-        if (!token) {
-            console.error('GITHUB_TOKEN manquant');
-            return res.status(500).json({ error: 'Token GitHub non configuré' });
-        }
+        if (!token) return res.status(500).json({ error: 'Token GitHub manquant' });
 
-        const repoOwner = 'hasiniainahasina1-art';
-        const repoName = 'BOTAKI';
-        const filePath = fileName;
-
+        const repoOwner = 'hasiniainahasina1-art', repoName = 'BOTAKI', filePath = fileName;
         const targetColumns = FILE_STRUCTURE[fileName];
-        if (!targetColumns) return res.status(400).json({ error: 'Type de fichier inconnu' });
+        if (!targetColumns) return res.status(400).json({ error: 'Fichier inconnu' });
 
         if (mode === 'replace') {
-            const finalBase64 = await reorganizeExcel(fileBase64, targetColumns);
-            await commitFile(token, repoOwner, repoName, filePath, finalBase64, `Mise à jour ${fileName}`);
+            const finalB64 = await reorganizeExcel(fileBase64, targetColumns);
+            await commitFile(token, repoOwner, repoName, filePath, finalB64, `Mise à jour ${fileName}`);
             return res.status(200).json({ success: true });
         }
         else if (mode === 'append') {
-            const existingBuffer = await getFileContent(token, repoOwner, repoName, filePath);
-            if (!existingBuffer) {
-                return res.status(404).json({ error: 'Fichier existant introuvable' });
-            }
+            const existingBuf = await getFileContent(token, repoOwner, repoName, filePath);
+            if (!existingBuf) return res.status(404).json({ error: 'Fichier existant introuvable' });
 
-            const finalBase64 = await reorganizeExcel(fileBase64, targetColumns);
+            const finalB64 = await reorganizeExcel(fileBase64, targetColumns);
+            const oldWb = new ExcelJS.Workbook(); await oldWb.xlsx.load(existingBuf);
+            const newWb = new ExcelJS.Workbook(); await newWb.xlsx.load(Buffer.from(finalB64, 'base64'));
 
-            const oldWorkbook = new ExcelJS.Workbook();
-            await oldWorkbook.xlsx.load(existingBuffer);
-            const newWorkbook = new ExcelJS.Workbook();
-            await newWorkbook.xlsx.load(Buffer.from(finalBase64, 'base64'));
-
-            const extractRows = (worksheet) => {
-                const rows = [];
-                worksheet.eachRow({ includeEmpty: true }, (row) => {
+            const extract = (ws) => {
+                const r = [];
+                ws.eachRow({ includeEmpty: true }, row => {
                     const vals = [];
-                    for (let i = 1; i < row.values.length; i++) {
-                        vals.push(row.values[i] !== undefined ? row.values[i] : '');
-                    }
-                    rows.push(vals);
+                    for (let i = 1; i < row.values.length; i++) vals.push(row.values[i] !== undefined ? row.values[i] : '');
+                    r.push(vals);
                 });
-                return rows;
+                return r;
             };
 
-            const oldRows = extractRows(oldWorkbook.worksheets[0]);
-            const newRows = extractRows(newWorkbook.worksheets[0]);
+            const oldRows = extract(oldWb.worksheets[0]);
+            const newRows = extract(newWb.worksheets[0]);
+            const { mergedRows, added, updated } = mergeProducts(oldRows, newRows, targetColumns);
 
-            const { mergedRows, addedCount, updatedCount } = mergeProducts(oldRows, newRows, targetColumns);
-
-            const mergedWorkbook = new ExcelJS.Workbook();
-            const ws = mergedWorkbook.addWorksheet(oldWorkbook.worksheets[0].name);
+            const mergedWb = new ExcelJS.Workbook();
+            const ws = mergedWb.addWorksheet(oldWb.worksheets[0].name);
             mergedRows.forEach(row => ws.addRow(row));
-            const outBuffer = await mergedWorkbook.xlsx.writeBuffer();
-            const content = outBuffer.toString('base64');
-
-            let commitMsg = `Ajout de produits dans ${fileName}`;
-            if (addedCount > 0) commitMsg += ` – ${addedCount} nouveau(x)`;
-            if (updatedCount > 0) commitMsg += ` – ${updatedCount} mis à jour`;
-
-            await commitFile(token, repoOwner, repoName, filePath, content, commitMsg);
-
-            return res.status(200).json({
-                success: true,
-                added: addedCount,
-                updated: updatedCount
-            });
+            const outBuf = await mergedWb.xlsx.writeBuffer();
+            const content = outBuf.toString('base64');
+            const msg = `Ajout ${fileName} – ${added} nouveau(x), ${updated} mis à jour`;
+            await commitFile(token, repoOwner, repoName, filePath, content, msg);
+            return res.status(200).json({ success: true, added, updated });
         }
-        else {
-            return res.status(400).json({ error: 'Mode invalide' });
-        }
-    } catch (error) {
-        console.error('Erreur upload-base:', error);
-        return res.status(500).json({ error: error.message });
+        else return res.status(400).json({ error: 'Mode invalide' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: err.message });
     }
 }
 
 // --- Fonctions GitHub (inchangées) ---
 async function getFileContent(token, owner, repo, path) {
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const resp = await fetch(url, { headers: { Authorization: `token ${token}` } });
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` } });
     if (!resp.ok) return null;
     const data = await resp.json();
     return Buffer.from(data.content, 'base64');
 }
 
 async function getFileSha(token, owner, repo, path) {
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const resp = await fetch(url, { headers: { Authorization: `token ${token}` } });
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` } });
     if (!resp.ok) return null;
     const data = await resp.json();
     return data.sha;
 }
 
-async function commitFile(token, owner, repo, path, contentBase64, message) {
+async function commitFile(token, owner, repo, path, contentB64, message) {
     const sha = await getFileSha(token, owner, repo, path);
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const body = { message, content: contentBase64, branch: 'main' };
+    const body = { message, content: contentB64, branch: 'main' };
     if (sha) body.sha = sha;
-    const resp = await fetch(url, {
-        method: 'PUT',
-        headers: {
-            Authorization: `token ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+        method: 'PUT', headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
-    if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.message || 'Erreur GitHub');
-    }
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.message); }
 }
