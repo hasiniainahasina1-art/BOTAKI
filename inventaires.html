@@ -125,11 +125,11 @@
             listEl.innerHTML = filtered.map(f => {
                 // URL brute du fichier sur GitHub
                 const rawUrl = f.download_url;
-                // URL pour ouvrir avec Google Docs Viewer
-                const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}`;
+                // Utilisation de Microsoft Office Online Viewer (plus fiable pour les .xlsx)
+                const viewerUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(rawUrl)}`;
                 return `
                 <div class="file-item">
-                    <a href="${viewerUrl}" target="_blank" class="file-name" title="Ouvrir avec Google Docs Viewer">
+                    <a href="${viewerUrl}" target="_blank" class="file-name" title="Ouvrir avec Office Online">
                         ${f.name.replace('.xlsx', '')}
                     </a>
                     <div class="file-actions">
