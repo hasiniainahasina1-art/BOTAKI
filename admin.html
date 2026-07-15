@@ -19,7 +19,7 @@
             background: linear-gradient(135deg, var(--navy-deep), var(--navy));
             color: var(--ink); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;
         }
-        .admin-container { max-width: 700px; width: 100%; }
+        .admin-container { max-width: 750px; width: 100%; }
         .card {
             background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
             border: 1px solid rgba(244,180,0,0.2); border-radius: 20px; padding: 24px; margin-bottom: 20px;
@@ -52,7 +52,7 @@
         .modal-content {
             background: linear-gradient(165deg, var(--navy) 0%, var(--navy-deep) 100%);
             border: 1px solid rgba(244,180,0,0.4); border-radius: 20px;
-            padding: 24px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;
+            padding: 24px; width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto;
         }
         .mapping-row {
             display: flex; align-items: center; gap: 10px; margin: 10px 0;
@@ -63,8 +63,19 @@
         .sample-table {
             width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.8rem;
         }
-        .sample-table th { background: rgba(244,180,0,0.2); padding: 8px; text-align: left; }
-        .sample-table td { padding: 6px; border-bottom: 1px solid rgba(244,180,0,0.2); }
+        .sample-table th { background: rgba(244,180,0,0.2); padding: 8px; text-align: center; }
+        .sample-table td { padding: 6px; border-bottom: 1px solid rgba(244,180,0,0.2); white-space: nowrap; }
+        .role-select {
+            background: rgba(255,255,255,0.1); border:1px solid var(--gold); color: white; border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; width: 120px;
+        }
+        .column-header {
+            cursor: pointer; position: relative;
+        }
+        .column-header .role-label {
+            display: block; font-size: 0.7rem; color: var(--gold-light); margin-bottom: 4px;
+        }
+        .ignore-col { color: #a9b3d6; font-style: italic; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -100,7 +111,7 @@
     </div>
 </div>
 
-<!-- Modal de mapping (pour l'ajout) -->
+<!-- Modal de mapping pour l'ajout (inchangé) -->
 <div id="mappingModal" class="modal">
     <div class="modal-content">
         <h3>📋 Associer les colonnes</h3>
@@ -114,12 +125,15 @@
     </div>
 </div>
 
-<!-- Modal de confirmation de remplacement -->
+<!-- Modal de remplacement avec sélection des rôles -->
 <div id="replaceConfirmModal" class="modal">
     <div class="modal-content">
-        <h3>⚠️ Confirmer le remplacement</h3>
-        <p>Vous allez remplacer <strong id="replaceFileName"></strong> par le fichier suivant. Voici un aperçu des 5 premières lignes :</p>
+        <h3>⚠️ Remplacer le fichier</h3>
+        <p>Vérifiez et définissez le rôle de chaque colonne. Seules les colonnes avec un rôle seront conservées, dans l'ordre standard.</p>
         <div id="replaceSampleContainer"></div>
+        <div style="margin-top: 10px; font-size: 0.8rem; color: var(--gold-light);">
+            Ordre cible : <span id="targetOrderDisplay"></span>
+        </div>
         <div class="btn-group" style="justify-content: center; margin-top: 20px;">
             <button class="btn btn-gold" onclick="confirmReplaceAndUpload()">Confirmer le remplacement</button>
             <button class="btn btn-outline" onclick="closeReplaceConfirmModal()">Annuler</button>
@@ -161,7 +175,7 @@
 
     // ---- Gestion de l'upload ----
     let pendingMapping = null;
-    let pendingReplace = null; // pour le mode replace
+    let pendingReplace = null;
 
     async function handleUpload(type, mode) {
         const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
@@ -174,20 +188,18 @@
         }
 
         if (mode === 'replace') {
-            // Lire le fichier pour la prévisualisation
             try {
                 const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
                 if (rows.length === 0) throw new Error('Fichier vide');
-                // Afficher le modal de confirmation avec aperçu
                 openReplaceConfirmModal(type, file, rows);
             } catch(e) {
                 msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur de lecture du fichier : ' + e.message;
+                msgEl.textContent = 'Erreur de lecture : ' + e.message;
             }
         } else {
-            // Mode append (ajout) : logique existante avec mapping intelligent
+            // Append (inchangé)
             try {
                 const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -217,55 +229,82 @@
                 }
             } catch(e) {
                 msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur de lecture du fichier : ' + e.message;
+                msgEl.textContent = 'Erreur de lecture : ' + e.message;
             }
         }
     }
 
-    // ---- Mode remplacement : prévisualisation ----
+    // ---- Remplacement avec attribution des rôles ----
     function openReplaceConfirmModal(type, file, rows) {
         pendingReplace = { type, file, rows };
-        const fileName = type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx';
-        document.getElementById('replaceFileName').textContent = fileName;
+        const targetColumns = type === 'database' 
+            ? ['Code barre', 'Code article', 'Désignation'] 
+            : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
+        document.getElementById('targetOrderDisplay').textContent = targetColumns.join(' → ');
 
-        // Afficher les 5 premières lignes dans un tableau
-        const sampleCount = Math.min(5, rows.length);
-        let html = '<table class="sample-table"><thead><tr>';
-        // Déterminer le nombre maximum de colonnes sur l'échantillon
-        const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0);
-        // Utiliser la première ligne comme en-tête si elle contient des mots-clés, sinon "Colonne 1", etc.
+        // Nombre maximum de colonnes dans les 5 premières lignes
+        const maxCols = rows.slice(0,5).reduce((max, row) => Math.max(max, row.length), 0);
+        const sampleRows = rows.slice(0, 6); // jusqu'à 5 lignes + 1 header potentiel
+
+        // Déterminer si la première ligne ressemble à un en-tête
         const firstRow = rows[0];
         const hasHeader = firstRow && firstRow.some(cell => {
             const val = (cell || '').toString().toLowerCase().trim();
             return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
         });
-        if (hasHeader) {
+
+        let dataStart = hasHeader ? 1 : 0;
+        let headerValues = hasHeader ? firstRow : [];
+        if (!hasHeader) {
+            // si pas d'en-tête, on crée des noms de colonnes par défaut
+            headerValues = Array.from({length: maxCols}, (_, i) => `Colonne ${i+1}`);
+        }
+
+        // Construire le tableau d'aperçu avec des selects dans l'en-tête
+        let html = '<table class="sample-table"><thead><tr>';
+
+        // Pour chaque colonne, on crée un <th> avec un <select> pour le rôle
+        for (let c = 0; c < maxCols; c++) {
+            html += `<th class="column-header">
+                <div class="role-label">Rôle :</div>
+                <select class="role-select" id="role_${c}">
+                    <option value="">-- Ignorer --</option>`;
+            targetColumns.forEach(col => {
+                html += `<option value="${col}">${col}</option>`;
+            });
+            html += `</select>
+                <div style="font-size:0.7rem; margin-top:4px;">${escapeHtml(headerValues[c] || '')}</div>
+            </th>`;
+        }
+        html += '</tr></thead><tbody>';
+
+        // Afficher les 5 premières lignes de données (en sautant l'en-tête si détecté)
+        for (let r = dataStart; r < Math.min(dataStart+5, rows.length); r++) {
+            html += '<tr>';
             for (let c = 0; c < maxCols; c++) {
-                html += `<th>${escapeHtml(firstRow[c] || '')}</th>`;
+                html += `<td>${escapeHtml(rows[r] ? (rows[r][c] || '') : '')}</td>`;
             }
-            html += '</tr></thead><tbody>';
-            for (let r = 1; r < sampleCount; r++) {
-                html += '<tr>';
-                for (let c = 0; c < maxCols; c++) {
-                    html += `<td>${escapeHtml(rows[r] ? (rows[r][c] || '') : '')}</td>`;
-                }
-                html += '</tr>';
-            }
-        } else {
-            for (let c = 0; c < maxCols; c++) {
-                html += `<th>Colonne ${c+1}</th>`;
-            }
-            html += '</tr></thead><tbody>';
-            for (let r = 0; r < sampleCount; r++) {
-                html += '<tr>';
-                for (let c = 0; c < maxCols; c++) {
-                    html += `<td>${escapeHtml(rows[r] ? (rows[r][c] || '') : '')}</td>`;
-                }
-                html += '</tr>';
-            }
+            html += '</tr>';
         }
         html += '</tbody></table>';
+
         document.getElementById('replaceSampleContainer').innerHTML = html;
+
+        // Pré-remplir les rôles si l'en-tête d'origine correspond à un nom connu
+        if (hasHeader) {
+            for (let c = 0; c < maxCols; c++) {
+                const cellValue = (firstRow[c] || '').toString().toLowerCase().trim();
+                const sel = document.getElementById('role_' + c);
+                if (!sel) continue;
+                for (const col of targetColumns) {
+                    if (cellValue.includes(col.toLowerCase())) {
+                        sel.value = col;
+                        break;
+                    }
+                }
+            }
+        }
+
         document.getElementById('replaceConfirmModal').classList.add('open');
     }
 
@@ -276,13 +315,68 @@
 
     async function confirmReplaceAndUpload() {
         if (!pendingReplace) return;
-        const { type, file } = pendingReplace;
+        const { type, file, rows } = pendingReplace;
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
-        await uploadFile(type, file, 'replace', null, msgEl);
-        closeReplaceConfirmModal();
+        const targetColumns = type === 'database' 
+            ? ['Code barre', 'Code article', 'Désignation'] 
+            : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
+
+        // Récupérer le mapping depuis les selects
+        const maxCols = rows.slice(0,5).reduce((max, row) => Math.max(max, row.length), 0);
+        const mapping = {}; // { role: columnIndex }
+        for (let c = 0; c < maxCols; c++) {
+            const sel = document.getElementById('role_' + c);
+            if (sel && sel.value) {
+                mapping[sel.value] = c;
+            }
+        }
+
+        // Vérifier que tous les rôles requis sont mappés
+        const missing = targetColumns.filter(col => !(col in mapping));
+        if (missing.length > 0) {
+            alert('Veuillez attribuer un rôle à toutes les colonnes obligatoires : ' + missing.join(', '));
+            return;
+        }
+
+        // Déterminer si la première ligne est un en-tête
+        const firstRow = rows[0];
+        const hasHeader = firstRow && firstRow.some(cell => {
+            const val = (cell || '').toString().toLowerCase().trim();
+            return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
+        });
+        const dataStart = hasHeader ? 1 : 0;
+
+        // Construire un nouveau fichier Excel avec les colonnes dans l'ordre cible
+        try {
+            const newWorkbook = XLSX.utils.book_new();
+            const newRows = [];
+            // En-tête = targetColumns
+            newRows.push(targetColumns);
+
+            for (let r = dataStart; r < rows.length; r++) {
+                const row = rows[r];
+                const newRow = targetColumns.map(col => {
+                    const idx = mapping[col];
+                    return (idx !== undefined && row[idx] !== undefined) ? row[idx] : '';
+                });
+                newRows.push(newRow);
+            }
+
+            const newSheet = XLSX.utils.aoa_to_sheet(newRows);
+            XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Feuille1');
+            const newBuffer = XLSX.write(newWorkbook, { type: 'array', bookType: 'xlsx' });
+            const newBlob = new Blob([newBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            // Envoyer le fichier reconstruit
+            await uploadFile(type, newBlob, 'replace', null, msgEl);
+            closeReplaceConfirmModal();
+        } catch(e) {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur reconstruction : ' + e.message;
+        }
     }
 
-    // ---- Utilitaires pour le mapping (mode append) ----
+    // ---- Utilitaires pour le mapping (append) ----
     function detectHeaderIndices(headerRow, targetColumns) {
         const indices = {};
         const cleanHeader = headerRow.map(c => (c || '').toString().toLowerCase().trim());
@@ -323,7 +417,6 @@
         });
         document.getElementById('mappingFields').innerHTML = fieldsHtml;
 
-        // Présélection automatique
         if (rows.length > 0) {
             const header = rows[0];
             const detected = detectHeaderIndices(header, targetColumns);
@@ -390,11 +483,10 @@
             closeMappingModal();
         } catch(e) {
             msgEl.className = 'message error';
-            msgEl.textContent = 'Erreur lors de la reconstruction du fichier : ' + e.message;
+            msgEl.textContent = 'Erreur reconstruction : ' + e.message;
         }
     }
 
-    // ---- Fonction générique d'upload ----
     async function uploadFile(type, file, mode, mapping, msgEl) {
         msgEl.className = 'message';
         msgEl.textContent = 'Envoi en cours...';
