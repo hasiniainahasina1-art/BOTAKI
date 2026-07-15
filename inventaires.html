@@ -122,16 +122,22 @@
                 listEl.innerHTML = '<p class="info-message">Aucun fichier trouvé dans ce dossier.</p>';
                 return;
             }
-            listEl.innerHTML = filtered.map(f => `
+            listEl.innerHTML = filtered.map(f => {
+                // URL brute du fichier sur GitHub
+                const rawUrl = f.download_url;
+                // URL pour ouvrir avec Google Docs Viewer
+                const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}`;
+                return `
                 <div class="file-item">
-                    <a href="${f.download_url}" target="_blank" class="file-name" title="Ouvrir le fichier">
+                    <a href="${viewerUrl}" target="_blank" class="file-name" title="Ouvrir avec Google Docs Viewer">
                         ${f.name.replace('.xlsx', '')}
                     </a>
                     <div class="file-actions">
-                        <a href="${f.download_url}" download title="Télécharger">📥 Télécharger</a>
+                        <a href="${rawUrl}" download title="Télécharger le fichier">📥 Télécharger</a>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function loadCategory(cat) {
