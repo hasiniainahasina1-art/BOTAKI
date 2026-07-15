@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* exactement le même style que ton code fonctionnel */
         :root {
             --navy-deep: #131c42;
             --navy: #1e2f6b;
@@ -22,69 +23,334 @@
             --ink-muted: #a9b3d6;
             --line: rgba(244, 180, 0, 0.16);
         }
+
         * { box-sizing: border-box; }
+
         body {
-            margin: 0; min-height: 100vh; font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at 15% -10%, var(--blue-soft) 0%, transparent 45%),
-                        radial-gradient(circle at 100% 110%, var(--navy) 0%, transparent 55%),
-                        linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 100%);
-            color: var(--ink); display: flex; flex-direction: column; align-items: center; padding: 0 20px 60px;
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at 15% -10%, var(--blue-soft) 0%, transparent 45%),
+                radial-gradient(circle at 100% 110%, var(--navy) 0%, transparent 55%),
+                linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 100%);
+            color: var(--ink);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 20px 60px;
         }
+
         body::before {
-            content: ""; position: fixed; inset: 0;
-            background-image: repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 26px),
-                            repeating-linear-gradient(-45deg, var(--line) 0 1px, transparent 1px 26px);
-            opacity: 0.5; pointer-events: none; z-index: 0;
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 26px),
+                repeating-linear-gradient(-45deg, var(--line) 0 1px, transparent 1px 26px);
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
         }
-        .header { position: relative; z-index: 1; width: 100%; max-width: 700px; padding: 48px 0 36px; display: flex; align-items: center; gap: 20px; animation: rise 0.6s ease both; }
-        .logo { flex-shrink: 0; width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(155deg, var(--gold) 0%, #d99a00 100%); display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 28px; color: var(--navy-deep); box-shadow: 0 8px 24px rgba(244, 180, 0, 0.25); transform: rotate(-4deg); }
-        .brand .title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 26px; letter-spacing: 0.3px; color: var(--ink); line-height: 1.1; }
-        .brand .subtitle { margin-top: 4px; font-size: 12px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold-light); }
-        .container { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 700px; animation: rise 0.6s ease 0.1s both; }
-        .card { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(8px); border: 1px solid rgba(244, 180, 0, 0.2); border-radius: 20px; padding: 20px 22px; }
-        input, select { padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(244, 180, 0, 0.3); background: rgba(255, 255, 255, 0.06); color: var(--ink); font-family: 'Inter', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-        input:focus, select:focus { border-color: var(--gold); background: rgba(255, 255, 255, 0.1); }
-        .btn { padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: none; transition: transform 0.2s, background 0.2s; white-space: nowrap; }
-        .btn-gold { background: var(--gold); color: var(--navy-deep); box-shadow: 0 4px 12px rgba(244, 180, 0, 0.3); }
+
+        .header {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 700px;
+            padding: 48px 0 36px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            animation: rise 0.6s ease both;
+        }
+
+        .logo {
+            flex-shrink: 0;
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(155deg, var(--gold) 0%, #d99a00 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 28px;
+            color: var(--navy-deep);
+            box-shadow: 0 8px 24px rgba(244, 180, 0, 0.25);
+            transform: rotate(-4deg);
+        }
+
+        .brand .title {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 26px;
+            letter-spacing: 0.3px;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .brand .subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--gold-light);
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 700px;
+            animation: rise 0.6s ease 0.1s both;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(244, 180, 0, 0.2);
+            border-radius: 20px;
+            padding: 20px 22px;
+        }
+
+        .emplacement-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .emplacement-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--ink-muted);
+            white-space: nowrap;
+        }
+
+        input {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(244, 180, 0, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--gold);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s, background 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            color: var(--navy-deep);
+            box-shadow: 0 4px 12px rgba(244, 180, 0, 0.3);
+        }
+
         .btn-gold:hover { background: var(--gold-light); transform: translateY(-2px); }
-        .btn-outline { background: transparent; border: 1px solid rgba(244, 180, 0, 0.4); color: var(--gold-light); }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(244, 180, 0, 0.4);
+            color: var(--gold-light);
+        }
+
         .btn-outline:hover { background: rgba(244, 180, 0, 0.1); }
-        .btn-danger { background: #dc2626; color: white; border: none; }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            border: none;
+        }
         .btn-danger:hover { background: #b91c1c; }
-        .form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-        .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
-        label { font-size: 0.7rem; text-transform: uppercase; font-weight: 600; color: var(--gold-light); letter-spacing: 0.5px; }
-        .designation-readonly { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(244, 180, 0, 0.15); cursor: not-allowed; }
-        .table-wrapper { overflow-x: auto; border-radius: 16px; border: 1px solid rgba(244, 180, 0, 0.2); background: rgba(0, 0, 0, 0.2); margin-top: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; color: var(--ink); min-width: 500px; }
-        th { background: rgba(244, 180, 0, 0.15); padding: 10px 8px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--gold); white-space: nowrap; }
-        td { padding: 8px; border-bottom: 1px solid rgba(244, 180, 0, 0.1); vertical-align: middle; }
-        tr.ligne-hors-base { background-color: rgba(220, 38, 38, 0.15) !important; }
-        .action-btns button { background: none; border: none; cursor: pointer; margin: 0 2px; font-size: 0.8rem; padding: 4px 8px; border-radius: 8px; transition: 0.2s; }
-        .btn-edit { color: #facc15; } .btn-edit:hover { background: rgba(250, 204, 21, 0.15); }
-        .btn-delete { color: #ef4444; } .btn-delete:hover { background: rgba(239, 68, 68, 0.15); }
-        .save-status { position: fixed; bottom: 15px; right: 15px; background: #2d4593cc; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.7rem; backdrop-filter: blur(4px); pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
-        .info-scan { font-size: 0.65rem; color: var(--ink-muted); margin-top: 2px; }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--gold-light);
+            letter-spacing: 0.5px;
+        }
+
+        .designation-readonly {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(244, 180, 0, 0.15);
+            cursor: not-allowed;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid rgba(244, 180, 0, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+            margin-top: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            color: var(--ink);
+            min-width: 500px;
+        }
+
+        th {
+            background: rgba(244, 180, 0, 0.15);
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--gold);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(244, 180, 0, 0.1);
+            vertical-align: middle;
+        }
+
+        tr.ligne-hors-base {
+            background-color: rgba(220, 38, 38, 0.15) !important;
+        }
+
+        .action-btns button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0 2px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-edit { color: #facc15; }
+        .btn-edit:hover { background: rgba(250, 204, 21, 0.15); }
+        .btn-delete { color: #ef4444; }
+        .btn-delete:hover { background: rgba(239, 68, 68, 0.15); }
+
+        .footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .save-status {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: #2d4593cc;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .info-scan {
+            font-size: 0.65rem;
+            color: var(--ink-muted);
+            margin-top: 2px;
+        }
+
         /* MODALES */
         .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
-            justify-content: center; align-items: center; z-index: 2000;
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
         }
         .modal.open { display: flex; }
         .modal-content {
             background: linear-gradient(165deg, var(--navy) 0%, var(--navy-deep) 100%);
-            border: 1px solid rgba(244, 180, 0, 0.4); border-radius: 20px;
-            padding: 24px; width: 90%; max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center;
+            border: 1px solid rgba(244, 180, 0, 0.4);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
         }
-        .modal-content h3 { margin: 0 0 12px; color: var(--gold-light); font-family: 'Fraunces', serif; font-weight: 600; }
-        .modal-content p { margin: 0 0 20px; font-size: 0.9rem; line-height: 1.5; }
-        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 12px; border: 1px solid rgba(244, 180, 0, 0.3); background: rgba(255, 255, 255, 0.06); color: var(--ink); font-size: 1rem; }
-        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
-        @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-content h3 {
+            margin: 0 0 12px;
+            color: var(--gold-light);
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+        }
+        .modal-content p {
+            margin: 0 0 20px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(244, 180, 0, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--ink);
+            font-size: 1rem;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         @media (max-width: 480px) {
-            .form-row { flex-direction: column; align-items: stretch; }
+            .form-row, .emplacement-section { flex-direction: column; align-items: stretch; }
             .btn { width: 100%; text-align: center; }
         }
     </style>
@@ -100,11 +366,20 @@
 </div>
 
 <div class="container">
-    <!-- Emplacement actif -->
-    <div class="card" id="emplacementCard" style="display: none;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-            <span class="emplacement-label">📍 Emplacement :</span>
-            <span id="emplacementNom" style="font-weight: 700; font-size: 1.1rem; color: var(--gold-light);"></span>
+    <!-- Section emplacement -->
+    <div class="card" id="emplacementCard">
+        <div id="emplacementInitial" style="display: flex; flex-direction: column; gap: 10px;">
+            <label style="font-size:0.8rem;">📍 Nommer l'emplacement de stock</label>
+            <div class="emplacement-section">
+                <input type="text" id="emplacementInput" placeholder="Ex: Étagère 3 - Allée B" autocomplete="off" style="flex:1;">
+                <button class="btn btn-gold" id="validerEmplacement">Valider</button>
+            </div>
+        </div>
+        <div id="emplacementActif" style="display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="emplacement-label">📍 Emplacement :</span>
+                <span id="emplacementNom" style="font-weight: 700; font-size: 1.1rem; color: var(--gold-light);"></span>
+            </div>
             <button class="btn btn-outline" id="modifierEmplacement">Modifier</button>
         </div>
     </div>
@@ -119,7 +394,7 @@
             </div>
             <div class="field-group">
                 <label>📝 Désignation</label>
-                <input type="text" id="designationInput" class="designation-readonly" readonly placeholder="Auto-recherche">
+                <input type="text" id="designationInput" class="designation-readonly" readonly placeholder="Auto-recherche" autocomplete="off">
             </div>
             <div class="field-group" style="max-width: 100px;">
                 <label>📦 Quantité</label>
@@ -131,36 +406,35 @@
         </div>
     </div>
 
-    <!-- Tableau des articles -->
+    <!-- Tableau des articles inventoriés -->
     <div class="card" id="tableCard" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <h3 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.2rem;">📋 Articles comptés</h3>
-            <div>
+            <div class="footer-actions">
                 <button id="exportBtn" class="btn btn-outline">📎 Exporter XLSX</button>
                 <button id="resetBtn" class="btn btn-danger">🗑️ Réinitialiser</button>
             </div>
         </div>
         <div class="table-wrapper">
             <table id="inventaireTable">
-                <thead><tr><th>Code Article</th><th>Code Barre</th><th>Désignation</th><th>Qté</th><th>Action</th></tr></thead>
-                <tbody id="tableBody"><tr><td colspan="5">Aucun article saisi</td></tr></tbody>
+                <thead>
+                    <tr>
+                        <th>Code Article</th>
+                        <th>Code Barre</th>
+                        <th>Désignation</th>
+                        <th>Qté</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" style="text-align:center;">Aucun article saisi</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- MODALES -->
-<div id="emplacementModal" class="modal open">
-    <div class="modal-content">
-        <h3>📍 Nommer l'emplacement</h3>
-        <p>Veuillez entrer l'emplacement de stock</p>
-        <input type="text" id="modalEmplacementInput" placeholder="Ex: Étagère 3 - Allée B" autocomplete="off">
-        <div class="modal-buttons">
-            <button class="btn btn-gold" id="validerEmplacementBtnModal">Valider</button>
-        </div>
-    </div>
-</div>
-
+<!-- MODALES EXISTANTES -->
 <div id="horsBaseModal" class="modal">
     <div class="modal-content">
         <h3>⚠️ Code introuvable</h3>
@@ -185,6 +459,7 @@
     </div>
 </div>
 
+<!-- NOUVELLE MODALE EXPORT -->
 <div id="exportModal" class="modal">
     <div class="modal-content">
         <h3>📁 Choisir le dossier</h3>
@@ -205,19 +480,27 @@
 
 <script>
     (function() {
+        // ---- Configuration ----
         const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
         const STORAGE_KEY = 'BOTAKI_inventaire';
 
+        // ---- État ----
         let produitsDB = [];
-        let inventaire = { emplacement: '', lignes: [] };
+        let inventaire = {
+            emplacement: '',
+            lignes: []
+        };
         let dernierProduitValide = null;
         let baseChargee = false;
         let doublonData = null;
 
-        // DOM elements
-        const emplacementCard = document.getElementById('emplacementCard');
-        const emplacementNomSpan = document.getElementById('emplacementNom');
+        // ---- DOM ----
+        const emplacementInitial = document.getElementById('emplacementInitial');
+        const emplacementActif = document.getElementById('emplacementActif');
+        const emplacementInput = document.getElementById('emplacementInput');
+        const validerEmplacementBtn = document.getElementById('validerEmplacement');
         const modifierEmplacementBtn = document.getElementById('modifierEmplacement');
+        const emplacementNomSpan = document.getElementById('emplacementNom');
         const articleCard = document.getElementById('articleCard');
         const tableCard = document.getElementById('tableCard');
         const codeInput = document.getElementById('codeInput');
@@ -228,10 +511,6 @@
         const exportBtn = document.getElementById('exportBtn');
         const resetBtn = document.getElementById('resetBtn');
         const saveStatusDiv = document.getElementById('saveStatus');
-
-        const emplacementModal = document.getElementById('emplacementModal');
-        const modalEmplacementInput = document.getElementById('modalEmplacementInput');
-        const validerEmplacementBtnModal = document.getElementById('validerEmplacementBtnModal');
 
         const horsBaseModal = document.getElementById('horsBaseModal');
         const modalCodeDisplay = document.getElementById('modalCodeDisplay');
@@ -244,17 +523,18 @@
         const confirmDoublonBtn = document.getElementById('confirmDoublonBtn');
         const cancelDoublonBtn = document.getElementById('cancelDoublonBtn');
 
+        // Nouveaux éléments export
         const exportModal = document.getElementById('exportModal');
         const exportFileName = document.getElementById('exportFileName');
         const exportCategorie = document.getElementById('exportCategorie');
         const confirmExportBtn = document.getElementById('confirmExportBtn');
         const cancelExportBtn = document.getElementById('cancelExportBtn');
 
-        // Sauvegarde / Chargement
+        // ---- Sauvegarde / Chargement ----
         function sauvegarder() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(inventaire));
             saveStatusDiv.style.opacity = '1';
-            setTimeout(() => saveStatusDiv.style.opacity = '0', 1500);
+            setTimeout(() => { saveStatusDiv.style.opacity = '0'; }, 1500);
         }
 
         function chargerSauvegarde() {
@@ -276,16 +556,19 @@
         }
 
         function afficherSaisieEmplacement() {
-            emplacementModal.classList.add('open');
-            modalEmplacementInput.value = '';
-            emplacementCard.style.display = 'none';
+            emplacementInitial.style.display = 'flex';
+            emplacementActif.style.display = 'none';
             articleCard.style.display = 'none';
             tableCard.style.display = 'none';
+            inventaire.emplacement = '';
+            inventaire.lignes = [];
+            sauvegarder();
+            renderTable();
         }
 
         function afficherEmplacementActif() {
-            emplacementModal.classList.remove('open');
-            emplacementCard.style.display = 'block';
+            emplacementInitial.style.display = 'none';
+            emplacementActif.style.display = 'flex';
             emplacementNomSpan.textContent = inventaire.emplacement;
             articleCard.style.display = 'block';
             tableCard.style.display = 'block';
@@ -293,93 +576,136 @@
             setTimeout(() => codeInput.focus(), 100);
         }
 
-        validerEmplacementBtnModal.addEventListener('click', () => {
-            const emp = modalEmplacementInput.value.trim();
-            if (!emp) { alert('Veuillez nommer l\'emplacement.'); return; }
-            inventaire.emplacement = emp;
-            sauvegarder();
-            afficherEmplacementActif();
-        });
-        modalEmplacementInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') validerEmplacementBtnModal.click(); });
+        // ---- Utilitaires ----
+        function normaliserCode(code) {
+            return code ? String(code).replace(/[\s.\-]/g, '') : '';
+        }
 
-        modifierEmplacementBtn.addEventListener('click', () => {
-            if (inventaire.lignes.length > 0 && !confirm('Changer d\'emplacement effacera les articles déjà saisis. Continuer ?')) return;
-            inventaire.emplacement = '';
-            inventaire.lignes = [];
-            sauvegarder();
-            renderTable();
-            afficherSaisieEmplacement();
-        });
-
-        // Utilitaires
-        function normaliserCode(code) { return code ? String(code).replace(/[\s.\-]/g, '') : ''; }
-        function rechercherProduit(id) {
-            if (!id || !baseChargee) return null;
-            const nid = normaliserCode(id);
-            return produitsDB.find(p => normaliserCode(p.codeBarre) === nid || normaliserCode(p.codeArticle) === nid);
+        function rechercherProduit(identifiant) {
+            if (!identifiant.trim() || !baseChargee) return null;
+            const id = normaliserCode(identifiant.trim());
+            return produitsDB.find(p => normaliserCode(p.codeBarre) === id || normaliserCode(p.codeArticle) === id);
         }
 
         function mettreAJourDesignation() {
             const code = codeInput.value.trim();
             if (!code) {
-                designationInput.value = ''; addBtn.disabled = true;
-                codeInput.classList.remove('valid', 'invalid'); return;
+                designationInput.value = '';
+                designationInput.classList.remove('designation-editable');
+                designationInput.readOnly = true;
+                dernierProduitValide = null;
+                addBtn.disabled = true;
+                codeInput.classList.remove('valid', 'invalid');
+                return;
             }
-            if (!baseChargee) { designationInput.value = '⌛ Chargement...'; addBtn.disabled = true; return; }
+            if (!baseChargee) {
+                designationInput.value = '⌛ Base en chargement...';
+                addBtn.disabled = true;
+                return;
+            }
             const produit = rechercherProduit(code);
             if (produit) {
                 designationInput.value = produit.designation;
+                designationInput.classList.remove('designation-editable');
+                designationInput.readOnly = true;
                 dernierProduitValide = produit;
                 addBtn.disabled = false;
-                codeInput.classList.add('valid'); codeInput.classList.remove('invalid');
+                codeInput.classList.add('valid');
+                codeInput.classList.remove('invalid');
             } else {
                 designationInput.value = '❌ Non trouvé';
+                designationInput.classList.add('designation-editable');
+                designationInput.readOnly = true;
                 dernierProduitValide = null;
                 addBtn.disabled = false;
-                codeInput.classList.remove('valid'); codeInput.classList.add('invalid');
+                codeInput.classList.remove('valid');
+                codeInput.classList.add('invalid');
             }
-            designationInput.readOnly = true;
         }
 
         function viderFormulaireArticle() {
-            codeInput.value = ''; designationInput.value = ''; quantiteInput.value = '1';
-            dernierProduitValide = null; addBtn.disabled = true;
+            codeInput.value = '';
+            designationInput.value = '';
+            designationInput.classList.remove('designation-editable');
+            designationInput.readOnly = true;
+            quantiteInput.value = '1';
+            dernierProduitValide = null;
+            addBtn.disabled = true;
             codeInput.classList.remove('valid', 'invalid');
         }
 
-        function ajouterLigne(cb, ca, des, qte, horsBase) {
-            inventaire.lignes.push({ codeBarre: cb || '', codeArticle: ca || '', designation: des, quantite: qte, horsBase });
-            renderTable(); sauvegarder(); viderFormulaireArticle(); codeInput.focus();
+        // ---- Gestion des lignes ----
+        function ajouterLigne(codeBarre, codeArticle, designation, quantite, horsBase) {
+            inventaire.lignes.push({
+                codeBarre: codeBarre || '',
+                codeArticle: codeArticle || '',
+                designation: designation,
+                quantite: quantite,
+                horsBase: horsBase
+            });
+            renderTable();
+            sauvegarder();
+            viderFormulaireArticle();
+            codeInput.focus();
         }
 
-        function trouverDoublon(cb, ca) {
-            const ncb = normaliserCode(cb), nca = normaliserCode(ca);
-            return inventaire.lignes.findIndex(l =>
-                (ncb && normaliserCode(l.codeBarre) === ncb) || (nca && normaliserCode(l.codeArticle) === nca)
-            );
+        function trouverDoublon(codeBarre, codeArticle) {
+            const cbNorm = normaliserCode(codeBarre);
+            const caNorm = normaliserCode(codeArticle);
+            return inventaire.lignes.findIndex(l => {
+                if (cbNorm && normaliserCode(l.codeBarre) === cbNorm) return true;
+                if (caNorm && normaliserCode(l.codeArticle) === caNorm) return true;
+                return false;
+            });
         }
 
-        function supprimerLigne(idx) { inventaire.lignes.splice(idx, 1); renderTable(); sauvegarder(); }
-        function modifierLigne(idx) {
-            const ligne = inventaire.lignes[idx];
+        function supprimerLigne(index) {
+            inventaire.lignes.splice(index, 1);
+            renderTable();
+            sauvegarder();
+        }
+
+        function modifierLigne(index) {
+            const ligne = inventaire.lignes[index];
             codeInput.value = ligne.codeBarre || ligne.codeArticle || '';
-            designationInput.value = ligne.designation; quantiteInput.value = ligne.quantite;
-            inventaire.lignes.splice(idx, 1);
-            sauvegarder(); renderTable(); codeInput.focus();
-            mettreAJourDesignation();
+            designationInput.value = ligne.designation;
+            if (ligne.horsBase) {
+                designationInput.classList.add('designation-editable');
+                designationInput.readOnly = true;
+            } else {
+                designationInput.classList.remove('designation-editable');
+                designationInput.readOnly = true;
+                const produit = rechercherProduit(codeInput.value);
+                if (produit) {
+                    dernierProduitValide = produit;
+                    addBtn.disabled = false;
+                } else {
+                    dernierProduitValide = null;
+                    addBtn.disabled = false;
+                }
+            }
+            quantiteInput.value = ligne.quantite;
+            inventaire.lignes.splice(index, 1);
+            sauvegarder();
+            renderTable();
+            codeInput.focus();
         }
 
         function renderTable() {
             if (!inventaire.lignes.length) {
-                tableBody.innerHTML = '<tr><td colspan="5">Aucun article saisi</td></tr>'; return;
+                tableBody.innerHTML = '<tr><td colspan="5">Aucun article saisi</td></tr>';
+                return;
             }
             let html = '';
-            inventaire.lignes.forEach((l, idx) => {
-                html += `<tr ${l.horsBase ? 'class="ligne-hors-base"' : ''}>
-                    <td>${escapeHtml(l.codeArticle || '-')}</td>
-                    <td>${escapeHtml(l.codeBarre || '-')}</td>
-                    <td>${escapeHtml(l.designation)}</td>
-                    <td>${l.quantite}</td>
+            inventaire.lignes.forEach((ligne, idx) => {
+                const codeArt = ligne.codeArticle || '-';
+                const codeBarre = ligne.codeBarre || '-';
+                const rowClass = ligne.horsBase ? 'class="ligne-hors-base"' : '';
+                html += `<tr ${rowClass}>
+                    <td>${escapeHtml(codeArt)}</td>
+                    <td>${escapeHtml(codeBarre)}</td>
+                    <td>${escapeHtml(ligne.designation)}</td>
+                    <td>${ligne.quantite}</td>
                     <td class="action-btns">
                         <button class="btn-edit" data-index="${idx}">✏️</button>
                         <button class="btn-delete" data-index="${idx}">🗑️</button>
@@ -387,112 +713,190 @@
                 </tr>`;
             });
             tableBody.innerHTML = html;
-            document.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => modifierLigne(parseInt(b.dataset.index))));
-            document.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => { if (confirm('Supprimer ?')) supprimerLigne(parseInt(b.dataset.index)); }));
+
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    modifierLigne(idx);
+                });
+            });
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    if (confirm('Supprimer cet article ?')) supprimerLigne(idx);
+                });
+            });
         }
 
-        function escapeHtml(s) { return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+        }
 
-        // Chargement base (corrigé)
+        // ---- Chargement base ----
         async function chargerBase() {
             tableBody.innerHTML = '<tr><td colspan="5">⏳ Chargement base articles...</td></tr>';
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-                const resp = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const wb = XLSX.read(await resp.arrayBuffer(), { type: 'array' });
-                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
+                const timeout = setTimeout(() => controller.abort(), 15000);
+                const response = await fetch(EXCEL_URL, { cache: 'no-store', signal: controller.signal });
+                clearTimeout(timeout);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const buffer = await response.arrayBuffer();
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
                 if (!rows || rows.length < 2) throw new Error('Fichier vide');
-                let start = (rows[0] && String(rows[0][0] || '').toLowerCase().includes('code')) ? 1 : 0;
+
+                let start = 0;
+                if (rows[0] && String(rows[0][0] || '').toLowerCase().includes('code')) start = 1;
+
                 produitsDB = [];
                 for (let i = start; i < rows.length; i++) {
-                    const r = rows[i]; if (!r || r.length < 3) continue;
-                    const cb = String(r[0] || '').trim(), ca = String(r[1] || '').trim(), des = String(r[2] || '').trim();
+                    const r = rows[i];
+                    if (!r || r.length < 3) continue;
+                    const cb = String(r[0] || '').trim();
+                    const ca = String(r[1] || '').trim();
+                    const des = String(r[2] || '').trim();
                     if (cb || ca) produitsDB.push({ codeBarre: cb, codeArticle: ca, designation: des || `Article ${cb||ca}` });
                 }
                 baseChargee = true;
                 renderTable();
-                // Si on était en attente de chargement pour un code saisi, réactiver la vérification
-                if (codeInput.value.trim()) mettreAJourDesignation();
             } catch(e) {
                 console.error(e);
                 tableBody.innerHTML = `<tr><td colspan="5" style="color:#ef4444;">❌ Erreur chargement base. Vérifiez la connexion.</td></tr>`;
                 baseChargee = false;
-                addBtn.disabled = true;
             }
         }
 
-        // Modales
+        // ---- Gestion des doublons ----
         function ouvrirDoublon(data) {
             doublonData = data;
-            doublonMessage.textContent = `Le code "${data.codeBarre || data.codeArticle}" existe déjà. Ajouter la quantité (${data.quantite}) ?`;
+            doublonMessage.textContent = `Le code "${data.codeBarre || data.codeArticle}" existe déjà. Voulez-vous ajouter la quantité (${data.quantite}) à la ligne existante ?`;
             doublonModal.classList.add('open');
         }
-        function fermerDoublon() { doublonModal.classList.remove('open'); doublonData = null; }
-        function confirmerDoublon() {
-            if (!doublonData) return;
-            const idx = trouverDoublon(doublonData.codeBarre, doublonData.codeArticle);
-            if (idx !== -1) { inventaire.lignes[idx].quantite += doublonData.quantite; renderTable(); sauvegarder(); }
-            fermerDoublon(); viderFormulaireArticle(); codeInput.focus();
+
+        function fermerDoublon() {
+            doublonModal.classList.remove('open');
+            doublonData = null;
         }
 
-        function preparerAjout(cb, ca, des, qte, hors) {
-            if (trouverDoublon(cb, ca) !== -1) { ouvrirDoublon({ codeBarre: cb, codeArticle: ca, designation: des, quantite: qte, horsBase: hors }); return false; }
-            ajouterLigne(cb, ca, des, qte, hors);
+        function confirmerDoublon() {
+            if (!doublonData) return;
+            const { codeBarre, codeArticle, quantite } = doublonData;
+            const idx = trouverDoublon(codeBarre, codeArticle);
+            if (idx !== -1) {
+                inventaire.lignes[idx].quantite += quantite;
+                renderTable();
+                sauvegarder();
+            }
+            fermerDoublon();
+            viderFormulaireArticle();
+            codeInput.focus();
+        }
+
+        // ---- Ajout avec vérification doublon ----
+        function preparerAjout(codeBarre, codeArticle, designation, quantite, horsBase) {
+            const idx = trouverDoublon(codeBarre, codeArticle);
+            if (idx !== -1) {
+                ouvrirDoublon({ codeBarre, codeArticle, designation, quantite, horsBase });
+                return false;
+            }
+            ajouterLigne(codeBarre, codeArticle, designation, quantite, horsBase);
             return true;
         }
 
         function gererAjout() {
             if (dernierProduitValide) {
-                let qte = parseInt(quantiteInput.value); if (isNaN(qte) || qte < 1) qte = 1;
-                preparerAjout(dernierProduitValide.codeBarre, dernierProduitValide.codeArticle, dernierProduitValide.designation, qte, false);
+                let qte = parseInt(quantiteInput.value, 10);
+                if (isNaN(qte) || qte < 1) qte = 1;
+                preparerAjout(
+                    dernierProduitValide.codeBarre,
+                    dernierProduitValide.codeArticle,
+                    dernierProduitValide.designation,
+                    qte,
+                    false
+                );
             } else {
-                const code = codeInput.value.trim(); if (!code) return;
-                modalCodeDisplay.textContent = code; modalQuantite.value = quantiteInput.value || 1;
+                const codeSaisi = codeInput.value.trim();
+                if (!codeSaisi) return;
+                modalCodeDisplay.textContent = codeSaisi;
+                modalQuantite.value = quantiteInput.value || 1;
                 horsBaseModal.classList.add('open');
             }
         }
 
-        function fermerHorsBase() { horsBaseModal.classList.remove('open'); }
-        function enregistrerHorsBase() {
-            const qte = parseInt(modalQuantite.value); if (isNaN(qte) || qte < 1) { alert('Quantité invalide'); return; }
-            const codeSaisi = codeInput.value.trim();
-            let cb = '', ca = '';
-            if (/^\d{8}$/.test(codeSaisi)) ca = codeSaisi; else cb = codeSaisi;
-            preparerAjout(cb, ca, '⚠️ HORS BASE', qte, true);
-            fermerHorsBase();
+        // ---- Modale hors base ----
+        function fermerModale() {
+            horsBaseModal.classList.remove('open');
         }
 
-        // Scanner
-        codeInput.addEventListener('dblclick', () => window.open('scan.html', '_blank'));
+        function enregistrerHorsBase() {
+            const qte = parseInt(modalQuantite.value, 10);
+            if (isNaN(qte) || qte < 1) {
+                alert('Veuillez entrer une quantité valide (minimum 1).');
+                return;
+            }
+            const codeSaisi = codeInput.value.trim();
+            let codeBarre = '', codeArticle = '';
+            if (/^\d{8}$/.test(codeSaisi)) codeArticle = codeSaisi;
+            else codeBarre = codeSaisi;
+
+            preparerAjout(codeBarre, codeArticle, '⚠️ HORS BASE', qte, true);
+            fermerModale();
+        }
+
+        // ---- Scanner ----
+        codeInput.addEventListener('dblclick', () => {
+            window.open('scan.html', '_blank');
+        });
+
         window.addEventListener('storage', (e) => {
             if (e.key === 'scannedCode' && e.newValue) {
-                codeInput.value = e.newValue; codeInput.dispatchEvent(new Event('input'));
-                localStorage.removeItem('scannedCode'); quantiteInput.focus();
+                codeInput.value = e.newValue;
+                codeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                localStorage.removeItem('scannedCode');
+                quantiteInput.focus();
             }
         });
 
-        // Export
+        // ---- NOUVEAU EXPORT AVEC MODALE ----
         let exportBlob = null;
+
         exportBtn.addEventListener('click', async () => {
-            if (!inventaire.lignes.length) { alert('Aucune ligne à exporter.'); return; }
-            const wb = new ExcelJS.Workbook();
-            const ws = wb.addWorksheet('Inventaire');
+            if (!inventaire.lignes.length) {
+                alert('Aucune ligne à exporter.');
+                return;
+            }
+            // Générer le fichier
+            const workbook = new ExcelJS.Workbook();
+            const ws = workbook.addWorksheet('Inventaire');
             ws.columns = [
                 { header: 'Code Article', key: 'codeArticle', width: 20 },
                 { header: 'Désignation', key: 'designation', width: 35 },
                 { header: 'Code Barre', key: 'codeBarre', width: 18 },
                 { header: 'Emplacement', key: 'emplacement', width: 25 }
             ];
-            ws.getRow(1).eachCell(cell => { cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0f172a' } }; cell.alignment = { horizontal: 'center' }; });
-            inventaire.lignes.forEach(l => ws.addRow({ codeArticle: l.codeArticle || l.codeBarre || '', designation: l.designation, codeBarre: l.codeBarre || '', emplacement: inventaire.emplacement }));
-            ws.eachRow((r, i) => { if (i > 1) r.eachCell(c => c.alignment = { horizontal: 'center' }); });
-            const buffer = await wb.xlsx.writeBuffer();
+            const headerRow = ws.getRow(1);
+            headerRow.eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0f172a' } };
+                cell.alignment = { horizontal: 'center' };
+            });
+            inventaire.lignes.forEach(l => {
+                ws.addRow({
+                    codeArticle: l.codeArticle || l.codeBarre || '',
+                    designation: l.designation,
+                    codeBarre: l.codeBarre || '',
+                    emplacement: inventaire.emplacement
+                });
+            });
+            ws.eachRow((row, rn) => {
+                if (rn > 1) row.eachCell(cell => cell.alignment = { horizontal: 'center' });
+            });
+            const buffer = await workbook.xlsx.writeBuffer();
             exportBlob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const fileNameDefault = `inventaire_${inventaire.emplacement.replace(/[\\/*?:"<>|]/g,'')}_${new Date().toISOString().slice(0,10)}.xlsx`;
-            exportFileName.textContent = fileNameDefault;
+            const defaultName = `inventaire_${inventaire.emplacement.replace(/[\\/*?:"<>|]/g,'')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+            exportFileName.textContent = defaultName;
             exportCategorie.value = 'Epicerie';
             exportModal.classList.add('open');
         });
@@ -501,8 +905,9 @@
             const categorie = exportCategorie.value;
             const fileName = exportFileName.textContent;
             exportModal.classList.remove('open');
-            saveAs(exportBlob, fileName);
+            saveAs(exportBlob, fileName); // Téléchargement local
 
+            // Upload cloud
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const base64 = reader.result.split(',')[1];
@@ -513,12 +918,14 @@
                         body: JSON.stringify({ fileBase64: base64, fileName, category: categorie })
                     });
                     const result = await resp.json();
-                    if (!result.success) alert('❌ Erreur cloud: ' + (result.error || ''));
-                } catch(e) { alert('❌ Erreur réseau cloud.'); }
+                    if (!result.success) console.error('Erreur cloud :', result.error);
+                } catch(e) {
+                    console.error('Erreur réseau cloud.', e);
+                }
             };
             reader.readAsDataURL(exportBlob);
 
-            // Réinitialisation totale
+            // Réinitialisation complète (y compris emplacement)
             inventaire.emplacement = '';
             inventaire.lignes = [];
             sauvegarder();
@@ -527,33 +934,66 @@
             afficherSaisieEmplacement();
         });
 
-        cancelExportBtn.addEventListener('click', () => exportModal.classList.remove('open'));
-        exportModal.addEventListener('click', (e) => { if (e.target === exportModal) exportModal.classList.remove('open'); });
+        cancelExportBtn.addEventListener('click', () => {
+            exportModal.classList.remove('open');
+        });
+        exportModal.addEventListener('click', (e) => {
+            if (e.target === exportModal) exportModal.classList.remove('open');
+        });
 
         function reinitialiser() {
             if (confirm('Effacer tout l\'inventaire en cours ?')) {
                 inventaire.lignes = [];
-                sauvegarder(); renderTable(); viderFormulaireArticle();
+                sauvegarder();
+                renderTable();
+                viderFormulaireArticle();
             }
         }
-        resetBtn.addEventListener('click', reinitialiser);
 
-        // Event listeners
+        // ---- Événements ----
+        validerEmplacementBtn.addEventListener('click', () => {
+            const emp = emplacementInput.value.trim();
+            if (!emp) { alert('Veuillez nommer l\'emplacement.'); return; }
+            inventaire.emplacement = emp;
+            sauvegarder();
+            afficherEmplacementActif();
+        });
+
+        modifierEmplacementBtn.addEventListener('click', () => {
+            if (inventaire.lignes.length > 0 && !confirm('Changer d\'emplacement effacera les articles déjà saisis. Continuer ?')) return;
+            afficherSaisieEmplacement();
+            emplacementInput.value = '';
+        });
+
+        codeInput.addEventListener('input', mettreAJourDesignation);
+        codeInput.addEventListener('blur', mettreAJourDesignation);
         addBtn.addEventListener('click', gererAjout);
-        quantiteInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); gererAjout(); } });
+        quantiteInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                gererAjout();
+            }
+        });
+
         confirmModalBtn.addEventListener('click', enregistrerHorsBase);
-        cancelModalBtn.addEventListener('click', fermerHorsBase);
-        horsBaseModal.addEventListener('click', (e) => { if (e.target === horsBaseModal) fermerHorsBase(); });
+        cancelModalBtn.addEventListener('click', fermerModale);
+        horsBaseModal.addEventListener('click', (e) => { if (e.target === horsBaseModal) fermerModale(); });
+
         confirmDoublonBtn.addEventListener('click', confirmerDoublon);
         cancelDoublonBtn.addEventListener('click', fermerDoublon);
         doublonModal.addEventListener('click', (e) => { if (e.target === doublonModal) fermerDoublon(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') {
-            if (horsBaseModal.classList.contains('open')) fermerHorsBase();
-            if (doublonModal.classList.contains('open')) fermerDoublon();
-            if (exportModal.classList.contains('open')) exportModal.classList.remove('open');
-        }});
 
-        // Init
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (horsBaseModal.classList.contains('open')) fermerModale();
+                if (doublonModal.classList.contains('open')) fermerDoublon();
+                if (exportModal.classList.contains('open')) exportModal.classList.remove('open');
+            }
+        });
+
+        resetBtn.addEventListener('click', reinitialiser);
+
+        // ---- Initialisation ----
         chargerSauvegarde();
         chargerBase();
     })();
