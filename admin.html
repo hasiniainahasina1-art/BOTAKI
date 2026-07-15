@@ -25,7 +25,6 @@
             border: 1px solid rgba(244,180,0,0.2); border-radius: 20px; padding: 24px; margin-bottom: 20px;
         }
         h2 { color: var(--gold-light); margin: 0 0 16px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; }
         input[type="file"] { width: 100%; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 12px; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn {
@@ -42,8 +41,6 @@
         input[type="password"] {
             width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;
         }
-
-        /* Modals */
         .modal {
             display: none; position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 2000;
@@ -54,27 +51,14 @@
             border: 1px solid rgba(244,180,0,0.4); border-radius: 20px;
             padding: 24px; width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto;
         }
-        .mapping-row {
-            display: flex; align-items: center; gap: 10px; margin: 10px 0;
-        }
-        .mapping-row select {
-            flex:1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); border:1px solid var(--gold); color:white;
-        }
-        .sample-table {
-            width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.8rem;
-        }
+        .mapping-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        .mapping-row select { flex:1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); border:1px solid var(--gold); color:white; }
+        .sample-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.8rem; }
         .sample-table th { background: rgba(244,180,0,0.2); padding: 8px; text-align: center; }
         .sample-table td { padding: 6px; border-bottom: 1px solid rgba(244,180,0,0.2); white-space: nowrap; }
-        .role-select {
-            background: rgba(255,255,255,0.1); border:1px solid var(--gold); color: white; border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; width: 120px;
-        }
-        .column-header {
-            cursor: pointer; position: relative;
-        }
-        .column-header .role-label {
-            display: block; font-size: 0.7rem; color: var(--gold-light); margin-bottom: 4px;
-        }
-        .ignore-col { color: #a9b3d6; font-style: italic; }
+        .role-select { background: rgba(255,255,255,0.1); border:1px solid var(--gold); color: white; border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; width: 120px; }
+        .column-header { cursor: pointer; position: relative; }
+        .column-header .role-label { display: block; font-size: 0.7rem; color: var(--gold-light); margin-bottom: 4px; }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; }
     </style>
 </head>
@@ -99,7 +83,6 @@
         </div>
         <div id="db-message" class="message"></div>
     </div>
-
     <div class="card">
         <h2>📋 Cadenceur (CADENCIER.xlsx)</h2>
         <input type="file" id="cadencierFile" accept=".xlsx, .xls">
@@ -111,7 +94,7 @@
     </div>
 </div>
 
-<!-- Modal de mapping pour l'ajout (inchangé) -->
+<!-- Modal de mapping pour l'ajout -->
 <div id="mappingModal" class="modal">
     <div class="modal-content">
         <h3>📋 Associer les colonnes</h3>
@@ -125,11 +108,11 @@
     </div>
 </div>
 
-<!-- Modal de remplacement avec sélection des rôles -->
+<!-- Modal de remplacement avec attribution des rôles -->
 <div id="replaceConfirmModal" class="modal">
     <div class="modal-content">
         <h3>⚠️ Remplacer le fichier</h3>
-        <p>Vérifiez et définissez le rôle de chaque colonne. Seules les colonnes avec un rôle seront conservées, dans l'ordre standard.</p>
+        <p>Définissez le rôle de chaque colonne. Les colonnes ignorées seront supprimées.</p>
         <div id="replaceSampleContainer"></div>
         <div style="margin-top: 10px; font-size: 0.8rem; color: var(--gold-light);">
             Ordre cible : <span id="targetOrderDisplay"></span>
@@ -142,7 +125,7 @@
 </div>
 
 <script>
-    // ---- Authentification ----
+    // Authentification
     if (sessionStorage.getItem('adminAuthenticated') === 'true') showAdmin();
 
     async function checkPassword() {
@@ -173,9 +156,18 @@
         document.getElementById('admin-content').style.display = 'block';
     }
 
-    // ---- Gestion de l'upload ----
     let pendingMapping = null;
     let pendingReplace = null;
+
+    // Lecture commune du fichier en base64 + rows
+    async function readFileAsBase64AndRows(file) {
+        const buffer = await file.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        return { base64, rows };
+    }
 
     async function handleUpload(type, mode) {
         const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
@@ -187,25 +179,14 @@
             return;
         }
 
-        if (mode === 'replace') {
-            try {
-                const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-                if (rows.length === 0) throw new Error('Fichier vide');
-                openReplaceConfirmModal(type, file, rows);
-            } catch(e) {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur de lecture : ' + e.message;
-            }
-        } else {
-            // Append (inchangé)
-            try {
-                const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-                if (rows.length === 0) throw new Error('Fichier vide');
+        try {
+            const { base64, rows } = await readFileAsBase64AndRows(file);
+            if (rows.length === 0) throw new Error('Fichier vide');
 
+            if (mode === 'replace') {
+                pendingReplace = { type, base64, rows };
+                openReplaceConfirmModal(type, rows);
+            } else { // append
                 const targetColumns = type === 'database' 
                     ? ['Code barre', 'Code article', 'Désignation'] 
                     : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
@@ -220,50 +201,40 @@
                     const detected = detectHeaderIndices(headerRow, targetColumns);
                     const missing = targetColumns.filter(col => !(col in detected));
                     if (missing.length === 0) {
-                        await uploadFile(type, file, 'append', null, msgEl);
+                        // Envoi direct avec le base64
+                        await uploadBase64(type, base64, 'append', msgEl);
                     } else {
-                        openMappingModal(type, file, rows, targetColumns);
+                        pendingMapping = { type, base64, rows, targetColumns };
+                        openMappingModal(type, rows, targetColumns);
                     }
                 } else {
-                    openMappingModal(type, file, rows, targetColumns);
+                    pendingMapping = { type, base64, rows, targetColumns };
+                    openMappingModal(type, rows, targetColumns);
                 }
-            } catch(e) {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur de lecture : ' + e.message;
             }
+        } catch(e) {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur de lecture : ' + e.message;
         }
     }
 
-    // ---- Remplacement avec attribution des rôles ----
-    function openReplaceConfirmModal(type, file, rows) {
-        pendingReplace = { type, file, rows };
+    // --- Remplacement avec attribution des rôles ---
+    function openReplaceConfirmModal(type, rows) {
         const targetColumns = type === 'database' 
             ? ['Code barre', 'Code article', 'Désignation'] 
             : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
         document.getElementById('targetOrderDisplay').textContent = targetColumns.join(' → ');
 
-        // Nombre maximum de colonnes dans les 5 premières lignes
         const maxCols = rows.slice(0,5).reduce((max, row) => Math.max(max, row.length), 0);
-        const sampleRows = rows.slice(0, 6); // jusqu'à 5 lignes + 1 header potentiel
-
-        // Déterminer si la première ligne ressemble à un en-tête
         const firstRow = rows[0];
         const hasHeader = firstRow && firstRow.some(cell => {
             const val = (cell || '').toString().toLowerCase().trim();
             return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
         });
-
+        let headerValues = hasHeader ? firstRow : Array.from({length: maxCols}, (_, i) => `Colonne ${i+1}`);
         let dataStart = hasHeader ? 1 : 0;
-        let headerValues = hasHeader ? firstRow : [];
-        if (!hasHeader) {
-            // si pas d'en-tête, on crée des noms de colonnes par défaut
-            headerValues = Array.from({length: maxCols}, (_, i) => `Colonne ${i+1}`);
-        }
 
-        // Construire le tableau d'aperçu avec des selects dans l'en-tête
         let html = '<table class="sample-table"><thead><tr>';
-
-        // Pour chaque colonne, on crée un <th> avec un <select> pour le rôle
         for (let c = 0; c < maxCols; c++) {
             html += `<th class="column-header">
                 <div class="role-label">Rôle :</div>
@@ -277,8 +248,6 @@
             </th>`;
         }
         html += '</tr></thead><tbody>';
-
-        // Afficher les 5 premières lignes de données (en sautant l'en-tête si détecté)
         for (let r = dataStart; r < Math.min(dataStart+5, rows.length); r++) {
             html += '<tr>';
             for (let c = 0; c < maxCols; c++) {
@@ -287,17 +256,16 @@
             html += '</tr>';
         }
         html += '</tbody></table>';
-
         document.getElementById('replaceSampleContainer').innerHTML = html;
 
-        // Pré-remplir les rôles si l'en-tête d'origine correspond à un nom connu
+        // Pré-remplissage si en-tête reconnu
         if (hasHeader) {
             for (let c = 0; c < maxCols; c++) {
-                const cellValue = (firstRow[c] || '').toString().toLowerCase().trim();
+                const val = (firstRow[c] || '').toString().toLowerCase().trim();
                 const sel = document.getElementById('role_' + c);
                 if (!sel) continue;
                 for (const col of targetColumns) {
-                    if (cellValue.includes(col.toLowerCase())) {
+                    if (val.includes(col.toLowerCase())) {
                         sel.value = col;
                         break;
                     }
@@ -315,15 +283,14 @@
 
     async function confirmReplaceAndUpload() {
         if (!pendingReplace) return;
-        const { type, file, rows } = pendingReplace;
+        const { type, base64, rows } = pendingReplace;
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
         const targetColumns = type === 'database' 
             ? ['Code barre', 'Code article', 'Désignation'] 
             : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
 
-        // Récupérer le mapping depuis les selects
         const maxCols = rows.slice(0,5).reduce((max, row) => Math.max(max, row.length), 0);
-        const mapping = {}; // { role: columnIndex }
+        const mapping = {};
         for (let c = 0; c < maxCols; c++) {
             const sel = document.getElementById('role_' + c);
             if (sel && sel.value) {
@@ -331,27 +298,22 @@
             }
         }
 
-        // Vérifier que tous les rôles requis sont mappés
         const missing = targetColumns.filter(col => !(col in mapping));
         if (missing.length > 0) {
             alert('Veuillez attribuer un rôle à toutes les colonnes obligatoires : ' + missing.join(', '));
             return;
         }
 
-        // Déterminer si la première ligne est un en-tête
-        const firstRow = rows[0];
-        const hasHeader = firstRow && firstRow.some(cell => {
-            const val = (cell || '').toString().toLowerCase().trim();
-            return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
-        });
-        const dataStart = hasHeader ? 1 : 0;
-
-        // Construire un nouveau fichier Excel avec les colonnes dans l'ordre cible
+        // Reconstruire un nouveau fichier Excel avec les colonnes ordonnées
         try {
             const newWorkbook = XLSX.utils.book_new();
-            const newRows = [];
-            // En-tête = targetColumns
-            newRows.push(targetColumns);
+            const newRows = [targetColumns]; // en-tête
+
+            const hasHeader = rows[0] && rows[0].some(cell => {
+                const val = (cell || '').toString().toLowerCase().trim();
+                return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
+            });
+            const dataStart = hasHeader ? 1 : 0;
 
             for (let r = dataStart; r < rows.length; r++) {
                 const row = rows[r];
@@ -365,10 +327,9 @@
             const newSheet = XLSX.utils.aoa_to_sheet(newRows);
             XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Feuille1');
             const newBuffer = XLSX.write(newWorkbook, { type: 'array', bookType: 'xlsx' });
-            const newBlob = new Blob([newBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const newBase64 = btoa(String.fromCharCode(...new Uint8Array(newBuffer)));
 
-            // Envoyer le fichier reconstruit
-            await uploadFile(type, newBlob, 'replace', null, msgEl);
+            await uploadBase64(type, newBase64, 'replace', msgEl);
             closeReplaceConfirmModal();
         } catch(e) {
             msgEl.className = 'message error';
@@ -376,19 +337,18 @@
         }
     }
 
-    // ---- Utilitaires pour le mapping (append) ----
+    // --- Mapping pour l'ajout ---
     function detectHeaderIndices(headerRow, targetColumns) {
         const indices = {};
-        const cleanHeader = headerRow.map(c => (c || '').toString().toLowerCase().trim());
+        const clean = headerRow.map(c => (c || '').toString().toLowerCase().trim());
         targetColumns.forEach(col => {
-            const idx = cleanHeader.findIndex(c => c.includes(col.toLowerCase()));
+            const idx = clean.findIndex(c => c.includes(col.toLowerCase()));
             if (idx !== -1) indices[col] = idx;
         });
         return indices;
     }
 
-    function openMappingModal(type, file, rows, targetColumns) {
-        pendingMapping = { type, file, rows, targetColumns, fileObj: file };
+    function openMappingModal(type, rows, targetColumns) {
         const sampleCount = Math.min(5, rows.length);
         let html = '<table class="sample-table"><thead><tr>';
         for (let i = 0; i < (rows[0] ? rows[0].length : 0); i++) {
@@ -405,26 +365,25 @@
         html += '</tbody></table>';
         document.getElementById('sampleContainerMapping').innerHTML = html;
 
-        const selectOptions = Array.from({ length: (rows[0] ? rows[0].length : 0) }, (_, i) => `<option value="${i}">Colonne ${i+1}</option>`);
-        selectOptions.unshift('<option value="-1">-- Ignorer --</option>');
+        const options = Array.from({ length: (rows[0] ? rows[0].length : 0) }, (_, i) => `<option value="${i}">Colonne ${i+1}</option>`);
+        options.unshift('<option value="-1">-- Ignorer --</option>');
 
         let fieldsHtml = '';
         targetColumns.forEach(col => {
             fieldsHtml += `<div class="mapping-row">
-                <label style="width: 120px;">${col} :</label>
-                <select id="map_${col.replace(/\s/g,'')}">${selectOptions.join('')}</select>
+                <label style="width:120px;">${col} :</label>
+                <select id="map_${col.replace(/\s/g,'')}">${options.join('')}</select>
             </div>`;
         });
         document.getElementById('mappingFields').innerHTML = fieldsHtml;
 
+        // Présélection
         if (rows.length > 0) {
             const header = rows[0];
             const detected = detectHeaderIndices(header, targetColumns);
             targetColumns.forEach(col => {
                 const sel = document.getElementById('map_' + col.replace(/\s/g,''));
-                if (sel && detected[col] !== undefined) {
-                    sel.value = detected[col];
-                }
+                if (sel && detected[col] !== undefined) sel.value = detected[col];
             });
         }
 
@@ -438,32 +397,30 @@
 
     async function applyMappingAndUpload() {
         if (!pendingMapping) return;
-        const { type, rows, targetColumns, fileObj } = pendingMapping;
+        const { type, rows, targetColumns } = pendingMapping;
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
 
         const mapping = {};
         targetColumns.forEach(col => {
             const sel = document.getElementById('map_' + col.replace(/\s/g,''));
-            if (sel && sel.value !== '-1') {
-                mapping[col] = parseInt(sel.value);
-            }
+            if (sel && sel.value !== '-1') mapping[col] = parseInt(sel.value);
         });
 
         const missing = targetColumns.filter(col => !(col in mapping));
         if (missing.length > 0) {
-            alert('Veuillez associer toutes les colonnes obligatoires : ' + missing.join(', '));
+            alert('Associez toutes les colonnes : ' + missing.join(', '));
             return;
         }
 
         try {
             const newWorkbook = XLSX.utils.book_new();
-            const newRows = [];
-            newRows.push(targetColumns);
+            const newRows = [targetColumns];
 
-            const dataStart = rows.length > 0 && rows[0].some(cell => {
+            const hasHeader = rows[0] && rows[0].some(cell => {
                 const val = (cell || '').toString().toLowerCase().trim();
                 return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(key => val.includes(key));
-            }) ? 1 : 0;
+            });
+            const dataStart = hasHeader ? 1 : 0;
 
             for (let r = dataStart; r < rows.length; r++) {
                 const row = rows[r];
@@ -477,9 +434,9 @@
             const newSheet = XLSX.utils.aoa_to_sheet(newRows);
             XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Feuille1');
             const newBuffer = XLSX.write(newWorkbook, { type: 'array', bookType: 'xlsx' });
-            const newBlob = new Blob([newBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const newBase64 = btoa(String.fromCharCode(...new Uint8Array(newBuffer)));
 
-            await uploadFile(type, newBlob, 'append', null, msgEl);
+            await uploadBase64(type, newBase64, 'append', msgEl);
             closeMappingModal();
         } catch(e) {
             msgEl.className = 'message error';
@@ -487,49 +444,41 @@
         }
     }
 
-    async function uploadFile(type, file, mode, mapping, msgEl) {
+    // --- Envoi d'un fichier en base64 ---
+    async function uploadBase64(type, fileBase64, mode, msgEl) {
         msgEl.className = 'message';
         msgEl.textContent = 'Envoi en cours...';
         msgEl.style.display = 'block';
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result.split(',')[1];
-            try {
-                const resp = await fetch('/api/upload-base', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fileBase64: base64,
-                        fileName: type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx',
-                        mode: mode
-                    })
-                });
-                let result;
-                const contentType = resp.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    result = await resp.json();
-                } else {
-                    const text = await resp.text();
-                    throw new Error('Réponse inattendue du serveur : ' + text.slice(0, 200));
-                }
-                if (resp.ok && result.success) {
-                    msgEl.className = 'message success';
-                    msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
-                } else {
-                    msgEl.className = 'message error';
-                    msgEl.textContent = 'Erreur : ' + (result.error || 'Erreur inconnue');
-                }
-            } catch(ex) {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur réseau : ' + ex.message;
+        try {
+            const resp = await fetch('/api/upload-base', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileBase64: fileBase64,
+                    fileName: type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx',
+                    mode: mode
+                })
+            });
+            let result;
+            const contentType = resp.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                result = await resp.json();
+            } else {
+                const text = await resp.text();
+                throw new Error('Réponse inattendue du serveur : ' + text.slice(0, 200));
             }
-        };
-        reader.onerror = () => {
+            if (resp.ok && result.success) {
+                msgEl.className = 'message success';
+                msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
+            } else {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur : ' + (result.error || 'Erreur inconnue');
+            }
+        } catch(ex) {
             msgEl.className = 'message error';
-            msgEl.textContent = 'Erreur de lecture du fichier.';
-        };
-        reader.readAsDataURL(file);
+            msgEl.textContent = 'Erreur réseau : ' + ex.message;
+        }
     }
 
     function escapeHtml(text) {
