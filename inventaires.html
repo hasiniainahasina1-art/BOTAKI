@@ -44,7 +44,23 @@
             margin-bottom: 0.5rem;
             backdrop-filter: blur(5px);
         }
-        .file-item a { color: var(--gold-light); text-decoration: none; font-weight: 500; }
+        .file-name {
+            color: var(--gold-light);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .file-name:hover { text-decoration: underline; }
+        .file-actions a {
+            color: white;
+            text-decoration: none;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        .file-actions a:hover { background: rgba(255,255,255,0.3); }
         .search-box { margin-bottom: 1rem; text-align: center; }
         .search-box input {
             padding: 0.5rem 1rem;
@@ -76,9 +92,9 @@
     <footer>Fichiers hébergés sur GitHub – BOTAKI</footer>
 
     <script>
-        const REPO_OWNER = 'hasiniainahasina1-art'; // À modifier si nécessaire
+        const REPO_OWNER = 'hasiniainahasina1-art';
         const REPO_NAME = 'BOTAKI';
-        const BASE_PATH = 'inventaires'; // dossier racine dans le dépôt
+        const BASE_PATH = 'inventaires';
 
         let currentCategory = 'Epicerie';
         const listEl = document.getElementById('fileList');
@@ -89,7 +105,7 @@
             const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${BASE_PATH}/${category}`;
             try {
                 const response = await fetch(url);
-                if (!response.ok) return []; // dossier vide ou inexistant
+                if (!response.ok) return [];
                 const data = await response.json();
                 return Array.isArray(data) ? data : [];
             } catch(e) {
@@ -108,8 +124,12 @@
             }
             listEl.innerHTML = filtered.map(f => `
                 <div class="file-item">
-                    <span>${f.name.replace('.xlsx', '')}</span>
-                    <a href="${f.download_url}" download>📥 Télécharger</a>
+                    <a href="${f.download_url}" target="_blank" class="file-name" title="Ouvrir le fichier">
+                        ${f.name.replace('.xlsx', '')}
+                    </a>
+                    <div class="file-actions">
+                        <a href="${f.download_url}" download title="Télécharger">📥 Télécharger</a>
+                    </div>
                 </div>
             `).join('');
         }
@@ -134,7 +154,6 @@
             renderFiles(files, searchInput.value);
         });
 
-        // Chargement initial
         loadCategory('Epicerie');
     </script>
 </body>
