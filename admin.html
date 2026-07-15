@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administration - BOTAKI</title>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -19,12 +18,13 @@
             background: linear-gradient(135deg, var(--navy-deep), var(--navy));
             color: var(--ink); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;
         }
-        .admin-container { max-width: 700px; width: 100%; }
+        .admin-container { max-width: 600px; width: 100%; }
         .card {
             background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
             border: 1px solid rgba(244,180,0,0.2); border-radius: 20px; padding: 24px; margin-bottom: 20px;
         }
         h2 { color: var(--gold-light); margin: 0 0 16px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
         input[type="file"] { width: 100%; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 12px; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn {
@@ -41,22 +41,6 @@
         input[type="password"] {
             width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;
         }
-
-        .modal {
-            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 2000;
-        }
-        .modal.open { display: flex; }
-        .modal-content {
-            background: linear-gradient(165deg, var(--navy) 0%, var(--navy-deep) 100%);
-            border: 1px solid rgba(244,180,0,0.4); border-radius: 20px;
-            padding: 24px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;
-        }
-        .mapping-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
-        .mapping-row select { flex:1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); border:1px solid var(--gold); color:white; }
-        .sample-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.8rem; }
-        .sample-table th { background: rgba(244,180,0,0.2); padding: 6px; }
-        .sample-table td { padding: 4px; border-bottom: 1px solid rgba(244,180,0,0.2); }
     </style>
 </head>
 <body>
@@ -75,8 +59,8 @@
         <h2>📚 Base articles (database.xlsx)</h2>
         <input type="file" id="databaseFile" accept=".xlsx, .xls">
         <div class="btn-group">
-            <button class="btn btn-gold" onclick="handleUpload('database', 'replace')">Remplacer</button>
-            <button class="btn btn-outline" onclick="handleUpload('database', 'append')">Ajouter des produits</button>
+            <button class="btn btn-gold" onclick="uploadBase('database', 'replace')">Remplacer</button>
+            <button class="btn btn-outline" onclick="uploadBase('database', 'append')">Ajouter des produits</button>
         </div>
         <div id="db-message" class="message"></div>
     </div>
@@ -85,30 +69,18 @@
         <h2>📋 Cadenceur (CADENCIER.xlsx)</h2>
         <input type="file" id="cadencierFile" accept=".xlsx, .xls">
         <div class="btn-group">
-            <button class="btn btn-gold" onclick="handleUpload('cadencier', 'replace')">Remplacer</button>
-            <button class="btn btn-outline" onclick="handleUpload('cadencier', 'append')">Ajouter des produits</button>
+            <button class="btn btn-gold" onclick="uploadBase('cadencier', 'replace')">Remplacer</button>
+            <button class="btn btn-outline" onclick="uploadBase('cadencier', 'append')">Ajouter des produits</button>
         </div>
         <div id="cad-message" class="message"></div>
     </div>
 </div>
 
-<!-- Modale mapping (pour l'ajout) -->
-<div id="mappingModal" class="modal">
-    <div class="modal-content">
-        <h3>📋 Associer les colonnes</h3>
-        <p>Le fichier ne contient pas les en-têtes attendus. Veuillez indiquer la correspondance.</p>
-        <div id="sampleContainerMapping"></div>
-        <div id="mappingFields"></div>
-        <div class="btn-group" style="justify-content: center; margin-top: 20px;">
-            <button class="btn btn-gold" onclick="applyMappingAndUpload()">Valider et ajouter</button>
-            <button class="btn btn-outline" onclick="closeMappingModal()">Annuler</button>
-        </div>
-    </div>
-</div>
-
 <script>
-    // ---- Authentification ----
-    if (sessionStorage.getItem('adminAuthenticated') === 'true') showAdmin();
+    // Vérification simple de session (stockée en sessionStorage)
+    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
+        showAdmin();
+    }
 
     async function checkPassword() {
         const password = document.getElementById('passwordInput').value;
@@ -138,98 +110,7 @@
         document.getElementById('admin-content').style.display = 'block';
     }
 
-    // ---- Variables globales ----
-    let pendingMapping = null; // pour l'ajout manuel
-
-    // Conversion ArrayBuffer -> base64 (robuste)
-    function arrayBufferToBase64(buffer) {
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-    }
-
-    // Détection des indices des colonnes cibles dans une ligne d'en-tête
-    function detectColumns(headerRow, targetCols) {
-        const indices = {};
-        const clean = headerRow.map(c => (c || '').toString().toLowerCase().trim());
-        targetCols.forEach(col => {
-            const idx = clean.findIndex(c => c.includes(col.toLowerCase()));
-            if (idx !== -1) indices[col] = idx;
-        });
-        return indices;
-    }
-
-    // Réorganiser les lignes selon l'ordre cible
-    function reorderRows(rows, targetCols, mapping, skipHeader = false) {
-        const newRows = [];
-        // Ajouter l'en-tête standard
-        newRows.push(targetCols);
-        const start = skipHeader ? 1 : 0;
-        for (let r = start; r < rows.length; r++) {
-            const row = rows[r];
-            const newRow = targetCols.map(col => {
-                const idx = mapping[col];
-                return (idx !== undefined && row[idx] !== undefined) ? row[idx] : '';
-            });
-            newRows.push(newRow);
-        }
-        return newRows;
-    }
-
-    // Créer un base64 à partir de lignes
-    function rowsToBase64(rows) {
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        XLSX.utils.book_append_sheet(wb, ws, 'Feuille1');
-        const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-        return arrayBufferToBase64(buf);
-    }
-
-    // Envoi à l'API
-    async function uploadToAPI(type, base64, mode, msgEl) {
-        msgEl.className = 'message';
-        msgEl.textContent = 'Envoi en cours...';
-        msgEl.style.display = 'block';
-
-        try {
-            const resp = await fetch('/api/upload-base', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileBase64: base64,
-                    fileName: type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx',
-                    mode: mode
-                })
-            });
-
-            const text = await resp.text();
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch {
-                throw new Error('Réponse non JSON : ' + text.slice(0, 200));
-            }
-
-            if (resp.ok && result.success) {
-                msgEl.className = 'message success';
-                msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
-            } else {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur API : ' + (result.error || 'inconnue');
-            }
-        } catch(e) {
-            msgEl.className = 'message error';
-            msgEl.textContent = 'Erreur réseau : ' + e.message;
-            console.error(e);
-        }
-    }
-
-    // ---- Gestion principale ----
-    async function handleUpload(type, mode) {
-        console.log('handleUpload appelé', type, mode);
+    async function uploadBase(type, mode) {
         const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
         const file = fileInput.files[0];
@@ -239,141 +120,52 @@
             return;
         }
 
-        msgEl.className = '';
-        msgEl.style.display = 'none';
+        msgEl.className = 'message';
+        msgEl.textContent = 'Envoi en cours...';
+        msgEl.style.display = 'block';
 
-        try {
-            // Lire le fichier
-            const buffer = await file.arrayBuffer();
-            const base64 = arrayBufferToBase64(buffer);
-            const wb = XLSX.read(buffer, { type: 'array' });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-            if (rows.length === 0) throw new Error('Fichier vide');
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result.split(',')[1];
+            try {
+                const resp = await fetch('/api/upload-base', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileBase64: base64,
+                        fileName: type === 'database' ? 'database.xlsx' : 'CADENCIER.xlsx',
+                        mode: mode
+                    })
+                });
 
-            const targetCols = type === 'database'
-                ? ['Code barre', 'Code article', 'Désignation']
-                : ['Code barre', 'Code article', 'Désignation', 'PCB', 'Fournisseur'];
-
-            const headerRow = rows[0];
-            const hasHeader = headerRow && headerRow.some(cell => {
-                const val = (cell || '').toString().toLowerCase().trim();
-                return ['code', 'barre', 'article', 'designation', 'pcb', 'fournisseur'].some(k => val.includes(k));
-            });
-
-            if (!hasHeader) {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Aucun en-tête reconnu. Le fichier doit contenir une ligne avec les noms de colonnes.';
-                return;
-            }
-
-            const detected = detectColumns(headerRow, targetCols);
-            const missing = targetCols.filter(col => !(col in detected));
-
-            if (missing.length > 0) {
-                if (mode === 'replace') {
-                    msgEl.className = 'message error';
-                    msgEl.textContent = 'Colonnes manquantes : ' + missing.join(', ') + '. Impossible de remplacer.';
+                // Tenter de lire la réponse en JSON, sinon afficher le texte brut
+                let result;
+                const contentType = resp.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    result = await resp.json();
                 } else {
-                    // Ajout avec mapping manuel
-                    pendingMapping = { type, base64, rows, targetCols };
-                    openMappingModal(rows, targetCols);
+                    const text = await resp.text();
+                    throw new Error('Réponse inattendue du serveur : ' + text.slice(0, 200));
                 }
-                return;
+
+                if (resp.ok && result.success) {
+                    msgEl.className = 'message success';
+                    msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
+                } else {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'Erreur : ' + (result.error || 'Erreur inconnue');
+                }
+            } catch(ex) {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur réseau : ' + ex.message;
             }
-
-            // Réorganisation automatique
-            const newRows = reorderRows(rows, targetCols, detected, true); // saute l'ancien en-tête
-            const newBase64 = rowsToBase64(newRows);
-            await uploadToAPI(type, newBase64, mode, msgEl);
-
-        } catch(e) {
+        };
+        reader.onerror = () => {
             msgEl.className = 'message error';
-            msgEl.textContent = 'Erreur : ' + e.message;
-            console.error(e);
-        }
+            msgEl.textContent = 'Erreur de lecture du fichier.';
+        };
+        reader.readAsDataURL(file);
     }
-
-    // ---- Modal de mapping manuel ----
-    function openMappingModal(rows, targetCols) {
-        const sampleCount = Math.min(5, rows.length);
-        let html = '<table class="sample-table"><thead><tr>';
-        const maxCols = rows.reduce((max, r) => Math.max(max, r.length), 0);
-        for (let i = 0; i < maxCols; i++) {
-            html += `<th>Colonne ${i+1}</th>`;
-        }
-        html += '</tr></thead><tbody>';
-        for (let r = 0; r < sampleCount; r++) {
-            html += '<tr>';
-            for (let c = 0; c < (rows[r] ? rows[r].length : 0); c++) {
-                html += `<td>${escapeHtml(rows[r][c] || '')}</td>`;
-            }
-            html += '</tr>';
-        }
-        html += '</tbody></table>';
-        document.getElementById('sampleContainerMapping').innerHTML = html;
-
-        const options = Array.from({ length: maxCols }, (_, i) => `<option value="${i}">Colonne ${i+1}</option>`);
-        options.unshift('<option value="-1">-- Ignorer --</option>');
-
-        let fields = '';
-        targetCols.forEach(col => {
-            fields += `<div class="mapping-row">
-                <label style="width:120px;">${col} :</label>
-                <select id="map_${col.replace(/\s/g,'')}">${options.join('')}</select>
-            </div>`;
-        });
-        document.getElementById('mappingFields').innerHTML = fields;
-
-        // Présélection si en-tête partiel
-        const header = rows[0];
-        const detected = detectColumns(header, targetCols);
-        targetCols.forEach(col => {
-            const sel = document.getElementById('map_' + col.replace(/\s/g,''));
-            if (sel && detected[col] !== undefined) sel.value = detected[col];
-        });
-
-        document.getElementById('mappingModal').classList.add('open');
-    }
-
-    function closeMappingModal() {
-        document.getElementById('mappingModal').classList.remove('open');
-        pendingMapping = null;
-    }
-
-    async function applyMappingAndUpload() {
-        if (!pendingMapping) return;
-        const { type, rows, targetCols } = pendingMapping;
-        const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
-
-        const mapping = {};
-        targetCols.forEach(col => {
-            const sel = document.getElementById('map_' + col.replace(/\s/g,''));
-            if (sel && sel.value !== '-1') mapping[col] = parseInt(sel.value);
-        });
-
-        const missing = targetCols.filter(col => !(col in mapping));
-        if (missing.length > 0) {
-            alert('Associez toutes les colonnes : ' + missing.join(', '));
-            return;
-        }
-
-        // Réorganiser
-        const newRows = reorderRows(rows, targetCols, mapping, true);
-        const newBase64 = rowsToBase64(newRows);
-        await uploadToAPI(type, newBase64, 'append', msgEl);
-        closeMappingModal();
-    }
-
-    function escapeHtml(s) {
-        return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-    }
-
-    // Vérification que les fonctions globales sont bien accessibles
-    window.handleUpload = handleUpload;
-    window.checkPassword = checkPassword;
-    window.applyMappingAndUpload = applyMappingAndUpload;
-    window.closeMappingModal = closeMappingModal;
 </script>
 </body>
 </html>
