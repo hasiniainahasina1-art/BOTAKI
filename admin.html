@@ -40,9 +40,6 @@
         input[type="password"] {
             width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;
         }
-        .help-text {
-            font-size: 0.75rem; color: var(--gold-light); margin-top: 4px;
-        }
     </style>
 </head>
 <body>
@@ -60,7 +57,6 @@
     <div class="card">
         <h2>📚 Base articles (database.xlsx)</h2>
         <input type="file" id="databaseFile" accept=".xlsx, .xls">
-        <div class="help-text">⚠️ Si vous modifiez le fichier (même en ajoutant une en-tête), vous devez le <strong>re‑sélectionner</strong> ici.</div>
         <div class="btn-group">
             <button class="btn btn-gold" id="dbReplaceBtn">Remplacer</button>
             <button class="btn btn-outline" id="dbAppendBtn">Ajouter des produits</button>
@@ -71,7 +67,6 @@
     <div class="card">
         <h2>📋 Cadenceur (CADENCIER.xlsx)</h2>
         <input type="file" id="cadencierFile" accept=".xlsx, .xls">
-        <div class="help-text">⚠️ Si vous modifiez le fichier (même en ajoutant une en-tête), vous devez le <strong>re‑sélectionner</strong> ici.</div>
         <div class="btn-group">
             <button class="btn btn-gold" id="cadReplaceBtn">Remplacer</button>
             <button class="btn btn-outline" id="cadAppendBtn">Ajouter des produits</button>
@@ -81,7 +76,7 @@
 </div>
 
 <script>
-    // Vérification de session
+    // Authentification via sessionStorage (mot de passe demandé à chaque nouvelle session)
     if (sessionStorage.getItem('adminAuthenticated') === 'true') showAdmin();
 
     document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -112,7 +107,7 @@
         document.getElementById('admin-content').style.display = 'block';
     }
 
-    // Conversion ArrayBuffer -> base64
+    // Conversion ArrayBuffer -> base64 (robuste)
     function arrayBufferToBase64(buffer) {
         const bytes = new Uint8Array(buffer);
         let binary = '';
@@ -122,7 +117,7 @@
         return btoa(binary);
     }
 
-    // Fonction d'upload
+    // Fonction générique d'upload (appelée par les 4 boutons)
     async function uploadFile(type, mode) {
         const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
@@ -161,23 +156,27 @@
             }
 
             if (resp.ok && result.success) {
+                let msg = '';
+                if (mode === 'replace') {
+                    msg = 'Fichier remplacé avec succès !';
+                } else {
+                    const added = result.added || 0;
+                    const updated = result.updated || 0;
+                    const parts = [];
+                    if (added > 0) parts.push(`${added} produit(s) ajouté(s)`);
+                    if (updated > 0) parts.push(`${updated} mis à jour`);
+                    msg = parts.length > 0 ? parts.join(', ') + '.' : 'Aucun nouveau produit ni modification.';
+                }
                 msgEl.className = 'message success';
-                msgEl.textContent = mode === 'replace' ? 'Fichier remplacé avec succès !' : 'Produits ajoutés avec succès !';
+                msgEl.textContent = msg;
             } else {
                 msgEl.className = 'message error';
                 msgEl.textContent = 'Erreur API : ' + (result.error || 'inconnue');
             }
         } catch(err) {
-            // Gestion spécifique de l'erreur de fichier modifié
-            if (err.name === 'NotReadableError' || err.message.includes('could not be read')) {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Le fichier a été modifié depuis sa sélection. Veuillez le re‑sélectionner.';
-                // Effacer le champ pour forcer la re-sélection
-                fileInput.value = '';
-            } else {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Erreur : ' + err.message;
-            }
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur : ' + err.message;
+            console.error(err);
         }
     }
 
