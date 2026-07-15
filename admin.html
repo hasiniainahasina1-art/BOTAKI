@@ -40,8 +40,8 @@
         input[type="password"] {
             width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(244,180,0,0.3); color: white; margin-bottom: 16px;
         }
-        .warning {
-            font-size: 0.8rem; color: var(--gold-light); margin-top: 8px; display: none;
+        .help-text {
+            font-size: 0.75rem; color: var(--gold-light); margin-top: 4px;
         }
     </style>
 </head>
@@ -60,7 +60,7 @@
     <div class="card">
         <h2>📚 Base articles (database.xlsx)</h2>
         <input type="file" id="databaseFile" accept=".xlsx, .xls">
-        <p class="warning" id="db-warning">⚠️ Si vous avez modifié le fichier après l'avoir sélectionné, veuillez le re-sélectionner.</p>
+        <div class="help-text">⚠️ Si vous modifiez le fichier (même en ajoutant une en-tête), vous devez le <strong>re‑sélectionner</strong> ici.</div>
         <div class="btn-group">
             <button class="btn btn-gold" id="dbReplaceBtn">Remplacer</button>
             <button class="btn btn-outline" id="dbAppendBtn">Ajouter des produits</button>
@@ -71,7 +71,7 @@
     <div class="card">
         <h2>📋 Cadenceur (CADENCIER.xlsx)</h2>
         <input type="file" id="cadencierFile" accept=".xlsx, .xls">
-        <p class="warning" id="cad-warning">⚠️ Si vous avez modifié le fichier après l'avoir sélectionné, veuillez le re-sélectionner.</p>
+        <div class="help-text">⚠️ Si vous modifiez le fichier (même en ajoutant une en-tête), vous devez le <strong>re‑sélectionner</strong> ici.</div>
         <div class="btn-group">
             <button class="btn btn-gold" id="cadReplaceBtn">Remplacer</button>
             <button class="btn btn-outline" id="cadAppendBtn">Ajouter des produits</button>
@@ -84,7 +84,6 @@
     // Vérification de session
     if (sessionStorage.getItem('adminAuthenticated') === 'true') showAdmin();
 
-    // Authentification
     document.getElementById('loginBtn').addEventListener('click', async () => {
         const password = document.getElementById('passwordInput').value;
         const msgEl = document.getElementById('login-message');
@@ -104,7 +103,7 @@
             }
         } catch(e) {
             msgEl.className = 'message error';
-            msgEl.textContent = 'Erreur réseau (vérifiez la connexion).';
+            msgEl.textContent = 'Erreur réseau.';
         }
     });
 
@@ -113,7 +112,7 @@
         document.getElementById('admin-content').style.display = 'block';
     }
 
-    // Conversion ArrayBuffer -> base64 (robuste)
+    // Conversion ArrayBuffer -> base64
     function arrayBufferToBase64(buffer) {
         const bytes = new Uint8Array(buffer);
         let binary = '';
@@ -123,11 +122,10 @@
         return btoa(binary);
     }
 
-    // Fonction générique d'upload
+    // Fonction d'upload
     async function uploadFile(type, mode) {
         const fileInput = document.getElementById(type === 'database' ? 'databaseFile' : 'cadencierFile');
         const msgEl = document.getElementById(type === 'database' ? 'db-message' : 'cad-message');
-        const warningEl = document.getElementById(type === 'database' ? 'db-warning' : 'cad-warning');
         const file = fileInput.files[0];
 
         if (!file) {
@@ -139,10 +137,8 @@
         msgEl.className = 'message';
         msgEl.textContent = 'Envoi en cours...';
         msgEl.style.display = 'block';
-        warningEl.style.display = 'none';
 
         try {
-            // Lecture en ArrayBuffer (méthode fiable)
             const buffer = await file.arrayBuffer();
             const base64 = arrayBufferToBase64(buffer);
 
@@ -172,10 +168,16 @@
                 msgEl.textContent = 'Erreur API : ' + (result.error || 'inconnue');
             }
         } catch(err) {
-            msgEl.className = 'message error';
-            msgEl.textContent = 'Erreur : ' + err.message + '. Re-sélectionnez le fichier si vous l\'avez modifié.';
-            warningEl.style.display = 'block';
-            console.error(err);
+            // Gestion spécifique de l'erreur de fichier modifié
+            if (err.name === 'NotReadableError' || err.message.includes('could not be read')) {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Le fichier a été modifié depuis sa sélection. Veuillez le re‑sélectionner.';
+                // Effacer le champ pour forcer la re-sélection
+                fileInput.value = '';
+            } else {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur : ' + err.message;
+            }
         }
     }
 
@@ -184,14 +186,6 @@
     document.getElementById('dbAppendBtn').addEventListener('click', () => uploadFile('database', 'append'));
     document.getElementById('cadReplaceBtn').addEventListener('click', () => uploadFile('cadencier', 'replace'));
     document.getElementById('cadAppendBtn').addEventListener('click', () => uploadFile('cadencier', 'append'));
-
-    // Optionnel : cacher les warnings quand on re-sélectionne un fichier
-    document.getElementById('databaseFile').addEventListener('change', () => {
-        document.getElementById('db-warning').style.display = 'none';
-    });
-    document.getElementById('cadencierFile').addEventListener('change', () => {
-        document.getElementById('cad-warning').style.display = 'none';
-    });
 </script>
 </body>
 </html>
