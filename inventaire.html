@@ -11,7 +11,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* exactement le même style que ton code fonctionnel */
         :root {
             --navy-deep: #131c42;
             --navy: #1e2f6b;
@@ -434,7 +433,7 @@
     </div>
 </div>
 
-<!-- MODALES EXISTANTES -->
+<!-- MODALES -->
 <div id="horsBaseModal" class="modal">
     <div class="modal-content">
         <h3>⚠️ Code introuvable</h3>
@@ -459,7 +458,6 @@
     </div>
 </div>
 
-<!-- NOUVELLE MODALE EXPORT -->
 <div id="exportModal" class="modal">
     <div class="modal-content">
         <h3>📁 Choisir le dossier</h3>
@@ -480,21 +478,16 @@
 
 <script>
     (function() {
-        // ---- Configuration ----
         const EXCEL_URL = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
         const STORAGE_KEY = 'BOTAKI_inventaire';
 
-        // ---- État ----
         let produitsDB = [];
-        let inventaire = {
-            emplacement: '',
-            lignes: []
-        };
+        let inventaire = { emplacement: '', lignes: [] };
         let dernierProduitValide = null;
         let baseChargee = false;
         let doublonData = null;
 
-        // ---- DOM ----
+        // DOM
         const emplacementInitial = document.getElementById('emplacementInitial');
         const emplacementActif = document.getElementById('emplacementActif');
         const emplacementInput = document.getElementById('emplacementInput');
@@ -523,18 +516,17 @@
         const confirmDoublonBtn = document.getElementById('confirmDoublonBtn');
         const cancelDoublonBtn = document.getElementById('cancelDoublonBtn');
 
-        // Nouveaux éléments export
         const exportModal = document.getElementById('exportModal');
         const exportFileName = document.getElementById('exportFileName');
         const exportCategorie = document.getElementById('exportCategorie');
         const confirmExportBtn = document.getElementById('confirmExportBtn');
         const cancelExportBtn = document.getElementById('cancelExportBtn');
 
-        // ---- Sauvegarde / Chargement ----
+        // Sauvegarde
         function sauvegarder() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(inventaire));
             saveStatusDiv.style.opacity = '1';
-            setTimeout(() => { saveStatusDiv.style.opacity = '0'; }, 1500);
+            setTimeout(() => saveStatusDiv.style.opacity = '0', 1500);
         }
 
         function chargerSauvegarde() {
@@ -576,7 +568,6 @@
             setTimeout(() => codeInput.focus(), 100);
         }
 
-        // ---- Utilitaires ----
         function normaliserCode(code) {
             return code ? String(code).replace(/[\s.\-]/g, '') : '';
         }
@@ -634,7 +625,6 @@
             codeInput.classList.remove('valid', 'invalid');
         }
 
-        // ---- Gestion des lignes ----
         function ajouterLigne(codeBarre, codeArticle, designation, quantite, horsBase) {
             inventaire.lignes.push({
                 codeBarre: codeBarre || '',
@@ -716,14 +706,12 @@
 
             document.querySelectorAll('.btn-edit').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const idx = parseInt(btn.getAttribute('data-index'), 10);
-                    modifierLigne(idx);
+                    modifierLigne(parseInt(btn.getAttribute('data-index'), 10));
                 });
             });
             document.querySelectorAll('.btn-delete').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const idx = parseInt(btn.getAttribute('data-index'), 10);
-                    if (confirm('Supprimer cet article ?')) supprimerLigne(idx);
+                    if (confirm('Supprimer cet article ?')) supprimerLigne(parseInt(btn.getAttribute('data-index'), 10));
                 });
             });
         }
@@ -732,7 +720,6 @@
             return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
         }
 
-        // ---- Chargement base ----
         async function chargerBase() {
             tableBody.innerHTML = '<tr><td colspan="5">⏳ Chargement base articles...</td></tr>';
             try {
@@ -768,7 +755,7 @@
             }
         }
 
-        // ---- Gestion des doublons ----
+        // Doublon
         function ouvrirDoublon(data) {
             doublonData = data;
             doublonMessage.textContent = `Le code "${data.codeBarre || data.codeArticle}" existe déjà. Voulez-vous ajouter la quantité (${data.quantite}) à la ligne existante ?`;
@@ -794,7 +781,6 @@
             codeInput.focus();
         }
 
-        // ---- Ajout avec vérification doublon ----
         function preparerAjout(codeBarre, codeArticle, designation, quantite, horsBase) {
             const idx = trouverDoublon(codeBarre, codeArticle);
             if (idx !== -1) {
@@ -825,7 +811,6 @@
             }
         }
 
-        // ---- Modale hors base ----
         function fermerModale() {
             horsBaseModal.classList.remove('open');
         }
@@ -845,7 +830,7 @@
             fermerModale();
         }
 
-        // ---- Scanner ----
+        // Scanner
         codeInput.addEventListener('dblclick', () => {
             window.open('scan.html', '_blank');
         });
@@ -859,7 +844,7 @@
             }
         });
 
-        // ---- NOUVEAU EXPORT AVEC MODALE ----
+        // Export avec modale
         let exportBlob = null;
 
         exportBtn.addEventListener('click', async () => {
@@ -867,12 +852,12 @@
                 alert('Aucune ligne à exporter.');
                 return;
             }
-            // Générer le fichier
             const workbook = new ExcelJS.Workbook();
             const ws = workbook.addWorksheet('Inventaire');
             ws.columns = [
                 { header: 'Code Article', key: 'codeArticle', width: 20 },
                 { header: 'Désignation', key: 'designation', width: 35 },
+                { header: 'Quantité', key: 'quantite', width: 12 },
                 { header: 'Code Barre', key: 'codeBarre', width: 18 },
                 { header: 'Emplacement', key: 'emplacement', width: 25 }
             ];
@@ -886,6 +871,7 @@
                 ws.addRow({
                     codeArticle: l.codeArticle || l.codeBarre || '',
                     designation: l.designation,
+                    quantite: l.quantite,
                     codeBarre: l.codeBarre || '',
                     emplacement: inventaire.emplacement
                 });
@@ -905,7 +891,7 @@
             const categorie = exportCategorie.value;
             const fileName = exportFileName.textContent;
             exportModal.classList.remove('open');
-            saveAs(exportBlob, fileName); // Téléchargement local
+            saveAs(exportBlob, fileName); // téléchargement local
 
             // Upload cloud
             const reader = new FileReader();
@@ -918,14 +904,14 @@
                         body: JSON.stringify({ fileBase64: base64, fileName, category: categorie })
                     });
                     const result = await resp.json();
-                    if (!result.success) console.error('Erreur cloud :', result.error);
+                    if (!result.success) console.error('Cloud error:', result.error);
                 } catch(e) {
-                    console.error('Erreur réseau cloud.', e);
+                    console.error('Network error cloud:', e);
                 }
             };
             reader.readAsDataURL(exportBlob);
 
-            // Réinitialisation complète (y compris emplacement)
+            // Réinitialisation complète
             inventaire.emplacement = '';
             inventaire.lignes = [];
             sauvegarder();
@@ -934,12 +920,8 @@
             afficherSaisieEmplacement();
         });
 
-        cancelExportBtn.addEventListener('click', () => {
-            exportModal.classList.remove('open');
-        });
-        exportModal.addEventListener('click', (e) => {
-            if (e.target === exportModal) exportModal.classList.remove('open');
-        });
+        cancelExportBtn.addEventListener('click', () => exportModal.classList.remove('open'));
+        exportModal.addEventListener('click', (e) => { if (e.target === exportModal) exportModal.classList.remove('open'); });
 
         function reinitialiser() {
             if (confirm('Effacer tout l\'inventaire en cours ?')) {
@@ -950,7 +932,7 @@
             }
         }
 
-        // ---- Événements ----
+        // Event listeners
         validerEmplacementBtn.addEventListener('click', () => {
             const emp = emplacementInput.value.trim();
             if (!emp) { alert('Veuillez nommer l\'emplacement.'); return; }
@@ -993,7 +975,7 @@
 
         resetBtn.addEventListener('click', reinitialiser);
 
-        // ---- Initialisation ----
+        // Init
         chargerSauvegarde();
         chargerBase();
     })();
