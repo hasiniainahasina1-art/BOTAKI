@@ -73,6 +73,19 @@
         </div>
         <div id="cad-message" class="message"></div>
     </div>
+
+    <div class="card">
+        <h2>🗑️ Nettoyage des inventaires</h2>
+        <p style="font-size:0.85rem; color:#a9b3d6; margin: 0 0 14px;">
+            Supprime automatiquement tous les inventaires de plus de <strong style="color:var(--gold-light)">3 jours</strong>
+            dans les dossiers Épicerie, BAZARD et Boisson.<br>
+            Ce nettoyage s'exécute aussi chaque nuit à 1h00 automatiquement.
+        </p>
+        <div class="btn-group">
+            <button class="btn btn-gold" id="cleanupBtn">🚀 Lancer le nettoyage maintenant</button>
+        </div>
+        <div id="cleanup-message" class="message"></div>
+    </div>
 </div>
 
 <script>
@@ -185,6 +198,43 @@
     document.getElementById('dbAppendBtn').addEventListener('click', () => uploadFile('database', 'append'));
     document.getElementById('cadReplaceBtn').addEventListener('click', () => uploadFile('cadencier', 'replace'));
     document.getElementById('cadAppendBtn').addEventListener('click', () => uploadFile('cadencier', 'append'));
+
+    // --- Nettoyage inventaires ---
+    document.getElementById('cleanupBtn').addEventListener('click', async () => {
+        const msgEl = document.getElementById('cleanup-message');
+        const btn   = document.getElementById('cleanupBtn');
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Nettoyage en cours…';
+        msgEl.className = 'message';
+        msgEl.style.display = 'block';
+        msgEl.textContent = 'Suppression des fichiers expirés sur GitHub…';
+
+        try {
+            const resp = await fetch('/api/cleanup-inventaires', { method: 'POST' });
+            const data = await resp.json();
+
+            if (data.success) {
+                const nb = data.supprimes.length;
+                const errNb = data.erreurs.length;
+                let msg = nb > 0
+                    ? `✅ ${nb} fichier(s) supprimé(s) : ${data.supprimes.join(', ')}`
+                    : '✅ Aucun fichier expiré à supprimer.';
+                if (errNb > 0) msg += ` ⚠️ ${errNb} erreur(s) : ${data.erreurs.join(', ')}`;
+                msgEl.className = 'message success';
+                msgEl.textContent = msg;
+            } else {
+                msgEl.className = 'message error';
+                msgEl.textContent = 'Erreur : ' + (data.error || 'inconnue');
+            }
+        } catch (err) {
+            msgEl.className = 'message error';
+            msgEl.textContent = 'Erreur réseau : ' + err.message;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🚀 Lancer le nettoyage maintenant';
+        }
+    });
 </script>
 </body>
 </html>
