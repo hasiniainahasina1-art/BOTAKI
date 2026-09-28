@@ -28,7 +28,9 @@
         .commanded-row td { background-color: #b91c1c !important; color: white !important; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 2000; }
         .modal-content { background: white; padding: 24px; border-radius: 32px; width: 85%; max-width: 320px; text-align: center; }
-        .modal-content input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; text-align: center; }
+        .modal-content input { width: 100%; padding: 12px; margin: 10px 0 4px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; text-align: center; }
+        .calc-hint { font-size: 0.75rem; color: #64748b; margin: 0 0 12px; }
+        .calc-result { font-size: 0.85rem; font-weight: 700; color: #2d4593; margin: 0 0 10px; min-height: 20px; }
         .modal-content button { padding: 8px 20px; margin: 5px; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; }
         .btn-add { background: #3b82f6; color: white; }
         .btn-cancel { background: #e2e8f0; }
@@ -68,8 +70,8 @@
 
     <div class="table-wrapper" id="tableContainer" style="display: none;">
         <table id="resultTable">
-            <thead><tr><th>Code barre</th><th>Code article</th><th>Désignation</th><th>PCB</th><th>Fournisseur</th></tr></thead>
-            <tbody id="tableBody"><tr><td colspan="5">Aucune donnée</td></tr></tbody>
+            <thead><tr><th>Code article</th><th>Désignation</th><th>PCB</th><th>Fournisseur</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="4">Aucune donnée</td></tr></tbody>
         </table>
         <p style="font-size:0.7rem; margin-top:8px;">✨ Cliquez sur une ligne pour commander. Les articles déjà commandés sont en rouge foncé.</p>
     </div>
@@ -79,7 +81,9 @@
             <h3>🛒 Passer commande</h3>
             <p id="modalArticleInfo">Article : </p>
             <p id="modalPCB" style="font-weight:bold;">PCB : </p>
-            <input type="number" id="commandeQty" placeholder="Quantité" min="1" step="1" value="1">
+            <input type="text" id="commandeQty" placeholder="Ex: 4*5 ou 20" inputmode="decimal" value="1">
+            <p class="calc-hint">💡 Calcul accepté : <strong>4*5</strong>, <strong>10+5</strong>, <strong>30-2</strong></p>
+            <p class="calc-result" id="calcResult"></p>
             <div>
                 <button id="confirmOrderBtn" class="btn-add">Ajouter / Modifier</button>
                 <button id="cancelOrderBtn" class="btn-cancel">Annuler</button>
@@ -210,14 +214,14 @@
         let filtered = allRows;
         if (fournisseurTerm) filtered = filtered.filter(r => r.fournisseur.toLowerCase().includes(fournisseurTerm));
         if (designationTerm) filtered = filtered.filter(r => r.designation.toLowerCase().includes(designationTerm));
-        if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="5">Aucun article</td></tr>'; return; }
+        if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="4">Aucun article</td></tr>'; return; }
         tableBody.innerHTML = '';
         filtered.forEach(article => {
             const tr = document.createElement('tr');
             tr.classList.add('clickable-row');
             if (isArticleCommanded(article)) tr.classList.add('commanded-row');
             tr.addEventListener('click', () => openOrderModal(article, null));
-            [article.codeBarre, article.codeArticle, article.designation, article.pcb, article.fournisseur].forEach(val => {
+            [article.codeArticle, article.designation, article.pcb, article.fournisseur].forEach(val => {
                 const td = document.createElement('td');
                 td.textContent = val || "-";
                 tr.appendChild(td);
@@ -233,14 +237,54 @@
         modalPCB.innerText = `PCB : ${article.pcb || "-"}`;
         commandeQty.value = (editIndex !== null && orders[editIndex]) ? orders[editIndex].commande : "1";
         confirmOrderBtn.textContent = (editIndex !== null) ? "Modifier" : "Ajouter";
+        document.getElementById('calcResult').textContent = '';
         modal.style.display = "flex";
+        setTimeout(() => commandeQty.select(), 50);
     }
 
-    function closeModal() { modal.style.display = "none"; currentSelectedArticle = null; editIndex = null; }
+    function closeModal() {
+        modal.style.display = "none";
+        currentSelectedArticle = null;
+        editIndex = null;
+        document.getElementById('calcResult').textContent = '';
+    }
+
+    // Évalue une expression arithmétique simple (+-*/) sans eval dangereux
+    function evalCalc(expr) {
+        const clean = expr.toString().trim().replace(/\s/g, '').replace(',', '.');
+        // N'accepter que chiffres, opérateurs +-*/, points et parenthèses
+        if (!/^[\d+\-*/().]+$/.test(clean)) return null;
+        try {
+            // Utilisation de Function pour éviter les injections (expression déjà filtrée)
+            const result = Function('"use strict"; return (' + clean + ')')();
+            if (typeof result !== 'number' || !isFinite(result)) return null;
+            return Math.round(result * 1000) / 1000; // arrondi propre
+        } catch { return null; }
+    }
+
+    // Mise à jour de l'aperçu calcul en temps réel
+    const calcResultEl = document.getElementById('calcResult');
+    commandeQty.addEventListener('input', () => {
+        const val = commandeQty.value.trim();
+        // Si c'est un nombre simple, pas d'aperçu
+        if (/^\d+$/.test(val)) { calcResultEl.textContent = ''; return; }
+        const result = evalCalc(val);
+        if (result !== null && result > 0) {
+            calcResultEl.textContent = `= ${result}`;
+            calcResultEl.style.color = '#16a34a';
+        } else if (val !== '') {
+            calcResultEl.textContent = 'Expression invalide';
+            calcResultEl.style.color = '#dc2626';
+        } else {
+            calcResultEl.textContent = '';
+        }
+    });
 
     function saveOrder() {
         if (!currentSelectedArticle) return;
-        const qty = parseInt(commandeQty.value);
+        const rawVal = commandeQty.value.trim();
+        const computed = evalCalc(rawVal);
+        const qty = (computed !== null) ? Math.floor(computed) : parseInt(rawVal);
         if (isNaN(qty) || qty <= 0) { alert("Quantité invalide"); return; }
         const newOrder = {
             codeArticle: currentSelectedArticle.codeArticle,
