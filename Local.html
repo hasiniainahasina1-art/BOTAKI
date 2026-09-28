@@ -66,8 +66,8 @@
                 <input type="text" id="fournisseurInput" placeholder="Ex: DUPONT" autocomplete="off">
             </div>
             <div class="filter-group">
-                <label>🔍 Désignation</label>
-                <input type="text" id="designationFilter" placeholder="Rechercher dans la désignation" autocomplete="off">
+                <label>🔍 Désignation ou Code article</label>
+                <input type="text" id="designationFilter" placeholder="Rechercher désignation ou code article" autocomplete="off">
             </div>
         </div>
     </div>
@@ -234,7 +234,10 @@
         const designationTerm = designationFilter.value.trim().toLowerCase();
         let filtered = allRows;
         if (fournisseurTerm) filtered = filtered.filter(r => r.fournisseur.toLowerCase().includes(fournisseurTerm));
-        if (designationTerm) filtered = filtered.filter(r => r.designation.toLowerCase().includes(designationTerm));
+        if (designationTerm) filtered = filtered.filter(r =>
+            r.designation.toLowerCase().includes(designationTerm) ||
+            r.codeArticle.toString().toLowerCase().includes(designationTerm)
+        );
         if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="4">Aucun article</td></tr>'; return; }
         tableBody.innerHTML = '';
         filtered.forEach(article => {
