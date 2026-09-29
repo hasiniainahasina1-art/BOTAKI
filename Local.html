@@ -361,6 +361,7 @@
 
         worksheet.columns = [
             { header: 'CODE ARTICLE', key: 'codeArticle', width: 20 },
+            { header: 'DESIGNATION',  key: 'designation',  width: 30 },
             { header: 'FOURNISSEUR',  key: 'fournisseur',  width: 30 },
             { header: 'PCB',          key: 'pcb',          width: 10 },
             { header: 'COMMANDE',     key: 'commande',     width: 12 },
@@ -385,6 +386,7 @@
             for (const order of commandes) {
                 const row = worksheet.getRow(currentRow);
                 row.getCell(1).value = order.codeArticle  || "";
+                row.getCell(2).value = order.designation  || "";
                 row.getCell(2).value = order.fournisseur  || "";
                 row.getCell(3).value = order.pcb          || "";
                 row.getCell(4).value = order.commande;
