@@ -31,10 +31,8 @@
         .modal-content input { width: 100%; padding: 12px; margin: 10px 0 4px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; text-align: center; }
         .calc-hint { font-size: 0.75rem; color: #64748b; margin: 0 0 12px; }
         .calc-result { font-size: 0.85rem; font-weight: 700; color: #2d4593; margin: 0 0 10px; min-height: 20px; }
-        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0 14px; }
-        .calc-key { padding: 10px 0; font-size: 1.1rem; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; background: #f1f5f9; color: #1e293b; }
-        .calc-key.op { background: #fef3c7; color: #92400e; }
-        .calc-key.del { background: #fee2e2; color: #b91c1c; }
+        .calc-result { font-size: 0.85rem; font-weight: 700; color: #16a34a; margin: 0 0 10px; min-height: 20px; text-align: center; }
+        .calc-hint { font-size: 0.72rem; color: #94a3b8; margin: 2px 0 10px; text-align: center; }
         .modal-content button { padding: 8px 20px; margin: 5px; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; }
         .btn-add { background: #3b82f6; color: white; }
         .btn-cancel { background: #e2e8f0; }
@@ -85,25 +83,8 @@
             <h3>🛒 Passer commande</h3>
             <p id="modalArticleInfo">Article : </p>
             <p id="modalPCB" style="font-weight:bold;">PCB : </p>
-            <input type="text" id="commandeQty" placeholder="Quantité" inputmode="numeric" value="1" readonly style="background:#f8fafc;">
-            <div class="calc-keys">
-                <button type="button" class="calc-key" data-val="7">7</button>
-                <button type="button" class="calc-key" data-val="8">8</button>
-                <button type="button" class="calc-key" data-val="9">9</button>
-                <button type="button" class="calc-key del" data-action="del">⌫</button>
-                <button type="button" class="calc-key" data-val="4">4</button>
-                <button type="button" class="calc-key" data-val="5">5</button>
-                <button type="button" class="calc-key" data-val="6">6</button>
-                <button type="button" class="calc-key op" data-val="*">×</button>
-                <button type="button" class="calc-key" data-val="1">1</button>
-                <button type="button" class="calc-key" data-val="2">2</button>
-                <button type="button" class="calc-key" data-val="3">3</button>
-                <button type="button" class="calc-key op" data-val="+">+</button>
-                <button type="button" class="calc-key" data-action="clear">C</button>
-                <button type="button" class="calc-key" data-val="0">0</button>
-                <button type="button" class="calc-key op" data-val="-">−</button>
-                <button type="button" class="calc-key op" data-val="/">/</button>
-            </div>
+            <input type="text" id="commandeQty" placeholder="Ex: 4*5 ou 20" inputmode="decimal" value="1">
+            <p class="calc-hint">💡 Calcul accepté : 4×5, 10+5, 30-2</p>
             <p class="calc-result" id="calcResult"></p>
             <div>
                 <button id="confirmOrderBtn" class="btn-add">Ajouter / Modifier</button>
@@ -286,39 +267,17 @@
         } catch { return null; }
     }
 
-    // Calculette intégrée — boutons dans la modale
+    // Aperçu calcul en temps réel
     const calcResultEl = document.getElementById('calcResult');
-
-    function updateCalcDisplay() {
+    commandeQty.addEventListener('input', () => {
         const val = commandeQty.value.trim();
         if (!val || /^\d+$/.test(val)) { calcResultEl.textContent = ''; return; }
         const result = evalCalc(val);
         if (result !== null && result > 0) {
             calcResultEl.textContent = `= ${result}`;
-            calcResultEl.style.color = '#16a34a';
         } else {
             calcResultEl.textContent = '';
         }
-    }
-
-    document.querySelectorAll('.calc-key').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const val    = btn.dataset.val;
-            const action = btn.dataset.action;
-            const field  = commandeQty;
-
-            if (action === 'del') {
-                field.value = field.value.slice(0, -1) || '';
-            } else if (action === 'clear') {
-                field.value = '';
-                calcResultEl.textContent = '';
-            } else if (val !== undefined) {
-                // Si le champ vaut "1" au départ et on tape un chiffre, on remplace
-                if (field.value === '1' && /^\d$/.test(val)) field.value = val;
-                else field.value += val;
-            }
-            updateCalcDisplay();
-        });
     });
 
     function saveOrder() {
@@ -401,10 +360,10 @@
         const worksheet = workbook.addWorksheet('Commandes');
 
         worksheet.columns = [
-            { header: 'Code Article', key: 'codeArticle', width: 20 },
-            { header: 'Désignation', key: 'designation', width: 30 },
-            { header: 'Commande', key: 'commande', width: 12 },
-            { header: 'Fournisseur', key: 'fournisseur', width: 20 }
+            { header: 'CODE ARTICLE', key: 'codeArticle', width: 20 },
+            { header: 'FOURNISSEUR',  key: 'fournisseur',  width: 30 },
+            { header: 'PCB',          key: 'pcb',          width: 10 },
+            { header: 'COMMANDE',     key: 'commande',     width: 12 },
         ];
 
         // Style en-tête
@@ -425,10 +384,10 @@
             // Ajouter les lignes de commandes (sans ligne titre)
             for (const order of commandes) {
                 const row = worksheet.getRow(currentRow);
-                row.getCell(1).value = order.codeArticle || "";
-                row.getCell(2).value = order.designation || "";
-                row.getCell(3).value = order.commande;
-                row.getCell(4).value = order.fournisseur || "";
+                row.getCell(1).value = order.codeArticle  || "";
+                row.getCell(2).value = order.fournisseur  || "";
+                row.getCell(3).value = order.pcb          || "";
+                row.getCell(4).value = order.commande;
                 row.eachCell(cell => {
                     cell.alignment = { horizontal: 'center', vertical: 'middle' };
                 });
