@@ -387,9 +387,9 @@
                 const row = worksheet.getRow(currentRow);
                 row.getCell(1).value = order.codeArticle  || "";
                 row.getCell(2).value = order.designation  || "";
-                row.getCell(2).value = order.fournisseur  || "";
-                row.getCell(3).value = order.pcb          || "";
-                row.getCell(4).value = order.commande;
+                row.getCell(3).value = order.fournisseur  || "";
+                row.getCell(4).value = order.pcb          || "";
+                row.getCell(5).value = order.commande;
                 row.eachCell(cell => {
                     cell.alignment = { horizontal: 'center', vertical: 'middle' };
                 });
