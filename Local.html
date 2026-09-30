@@ -408,6 +408,12 @@
 
         const buffer = await workbook.xlsx.writeBuffer();
         saveAs(new Blob([buffer]), fileName);
+
+        // Réinitialisation automatique après export
+        orders = [];
+        sauvegarderCommandes();
+        renderCart();
+        filterTable();
     }
 
     fournisseurInput.addEventListener('input', filterTable);
