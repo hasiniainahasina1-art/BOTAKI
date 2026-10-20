@@ -577,7 +577,22 @@ function renderHot() {
 
     const allRows = visuSheets[activeSheet] || [];
     // Séparer en-tête et données
-    const dataRows = allRows.length > 1 ? allRows.slice(1) : [Array(COLS.length).fill('')];
+    let dataRows = allRows.length > 1 ? allRows.slice(1) : [Array(COLS.length).fill('')];
+
+    // Trier par Dlv (colonne 6) — date la plus récente en haut
+    // Format attendu : DD/MM/YYYY ou YYYY-MM-DD
+    function dlvVersTimestamp(val) {
+        if (!val) return -Infinity;
+        const s = val.toString().trim();
+        // Format DD/MM/YYYY
+        const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (m1) return new Date(m1[3], m1[2]-1, m1[1]).getTime();
+        // Format YYYY-MM-DD
+        const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m2) return new Date(m2[1], m2[2]-1, m2[3]).getTime();
+        return -Infinity;
+    }
+    dataRows = dataRows.slice().sort((a, b) => dlvVersTimestamp(b[6]) - dlvVersTimestamp(a[6]));
 
     if (hotInstance) { hotInstance.destroy(); hotInstance = null; }
 
