@@ -443,7 +443,7 @@
 <!-- ACTIONS -->
 <div class="container">
 
-  <a class="action" href="Dlv.html">
+  <a class="action" id="dlvCard" href="Dlv.html" data-double-url="Dlv.html?mode=view">
     <span class="icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20.59 13.41L11 3.83A2 2 0 0 0 9.57 3H4a1 1 0 0 0-1 1v5.57a2 2 0 0 0 .83 1.43l9.59 9.59a2 2 0 0 0 2.82 0l4.35-4.35a2 2 0 0 0 0-2.83z"></path>
@@ -560,6 +560,27 @@
 </div>
 
 <script>
+  // Gestion du double-clic sur la carte DLV
+  (function() {
+    const dlvCard = document.getElementById('dlvCard');
+    if (!dlvCard) return;
+    let dlvTimer = null;
+    dlvCard.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (dlvTimer === null) {
+        dlvTimer = setTimeout(() => {
+          window.location.href = dlvCard.getAttribute('href');
+          dlvTimer = null;
+        }, 300);
+      } else {
+        clearTimeout(dlvTimer);
+        dlvTimer = null;
+        const doubleUrl = dlvCard.getAttribute('data-double-url');
+        if (doubleUrl) window.location.href = doubleUrl;
+      }
+    });
+  })();
+
   // Gestion du double-clic sur la carte inventaire
   (function() {
     const inventaireCard = document.getElementById('inventaireCard');
