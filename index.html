@@ -443,7 +443,7 @@
 <!-- ACTIONS -->
 <div class="container">
 
-  <a class="action" id="dlvCard" href="Dlv.html" data-double-url="dlv-edit.html">
+  <a class="action" href="Dlv.html">
     <span class="icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20.59 13.41L11 3.83A2 2 0 0 0 9.57 3H4a1 1 0 0 0-1 1v5.57a2 2 0 0 0 .83 1.43l9.59 9.59a2 2 0 0 0 2.82 0l4.35-4.35a2 2 0 0 0 0-2.83z"></path>
@@ -452,7 +452,7 @@
     </span>
     <span class="label">
       <span class="name">DLV ou Prix</span>
-      <span class="desc">Saisie DLV (double-clic pour éditer l'Excel)</span>
+      <span class="desc">Enregistrer la DLV d'un article ou rechercher un code article</span>
     </span>
     <span class="arrow">→</span>
   </a>
@@ -560,29 +560,33 @@
 </div>
 
 <script>
-  // Gestion simple-clic / double-clic pour les cartes (Inventaire + DLV)
+  // Gestion du double-clic sur la carte inventaire
   (function() {
-    function enableDoubleClick(cardId) {
-      const card = document.getElementById(cardId);
-      if (!card) return;
-      let clickTimer = null;
-      card.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (clickTimer === null) {
-          clickTimer = setTimeout(() => {
-            window.location.href = card.getAttribute('href');
-            clickTimer = null;
-          }, 300);
-        } else {
-          clearTimeout(clickTimer);
+    const inventaireCard = document.getElementById('inventaireCard');
+    if (!inventaireCard) return;
+
+    let clickTimer = null;
+
+    inventaireCard.addEventListener('click', function(e) {
+      e.preventDefault(); // On empêche la navigation immédiate
+
+      if (clickTimer === null) {
+        // Premier clic : on lance un timer de 300ms
+        clickTimer = setTimeout(() => {
+          // Simple clic confirmé
+          window.location.href = inventaireCard.getAttribute('href');
           clickTimer = null;
-          const doubleUrl = card.getAttribute('data-double-url');
-          if (doubleUrl) window.location.href = doubleUrl;
+        }, 300);
+      } else {
+        // Deuxième clic avant la fin du timer => double-clic
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        const doubleUrl = inventaireCard.getAttribute('data-double-url');
+        if (doubleUrl) {
+          window.location.href = doubleUrl;
         }
-      });
-    }
-    enableDoubleClick('inventaireCard');
-    enableDoubleClick('dlvCard');
+      }
+    });
   })();
 
   // ----- Support modal (inchangé) -----
