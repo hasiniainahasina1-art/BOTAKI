@@ -25,7 +25,7 @@ export default async function handler(req, res) {
         const content = Buffer.from(fileBase64, 'base64').toString('base64');
 
         // Appeler l'API GitHub pour créer (ou mettre à jour) le fichier
-        const response = await fetch(`https://api.github.com/repos/hasiniainahasina1-art/BOTAKI/contents/${path}`, {
+        const response = await fetch(`https://api.github.com/repos/Finoana123/Dlv/contents/${path}`, {
             method: 'PUT',
             headers: {
                 Authorization: `token ${token}`,

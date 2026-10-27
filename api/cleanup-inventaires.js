@@ -4,8 +4,8 @@
  * Méthode : GET (appelé par Vercel Cron) ou POST (appel manuel admin)
  */
 
-const REPO_OWNER = 'hasiniainahasina1-art';
-const REPO_NAME  = 'BOTAKI';
+const REPO_OWNER = 'Finoana123';
+const REPO_NAME  = 'Dlv';
 const CATEGORIES = ['Epicerie', 'BAZARD', 'Boisson'];
 const DELAI_JOURS = 3;
 
