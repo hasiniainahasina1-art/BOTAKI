@@ -3,688 +3,730 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BOTAKI - Dlv & Prix</title>
-
-    <!-- XLSX pour lecture base produits -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Handsontable — tableur Excel dans le navigateur -->
-    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.js"></script>
-
+    <title>BOTAKI - DLV & Prix</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
         :root {
-            --navy:#1e2f6b; --gold:#f4b400; --gold-light:#ffd54f;
-            --blue:#0b3b5f; --red:#dc2626; --green:#10b981;
+            --navy-deep: #131c42;
+            --navy: #1e2f6b;
+            --blue: #2d4593;
+            --gold: #f4b400;
+            --gold-light: #ffd54f;
+            --ink: #f5f6fb;
+            --ink-muted: #a9b3d6;
         }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(145deg,#b8e1fc 0%,#e0f2fe 100%);
-            font-family:'Segoe UI',Roboto,system-ui,sans-serif;
-            padding:1rem; min-height:100vh;
+            background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 100%);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            color: var(--ink);
+            padding: 1rem;
         }
-        .container { max-width:740px; margin:0 auto; }
+        .container { max-width: 520px; margin: 0 auto; }
 
-        /* ── HEADER ── */
-        .header {
-            display:flex; align-items:center; gap:.8rem; margin-bottom:1rem;
-        }
-        .back-btn {
-            background:var(--navy); color:white; border:none;
-            border-radius:50%; width:36px; height:36px;
-            font-size:1.1rem; cursor:pointer;
-            display:flex; align-items:center; justify-content:center; flex-shrink:0;
-        }
-        .header-info { flex:1; }
-        .header-title { font-size:1rem; font-weight:700; color:var(--navy); }
-        .header-sub   { font-size:.72rem; color:#555; margin-top:2px; }
-        .badge {
-            background:var(--gold); color:var(--navy);
-            font-weight:700; font-size:.75rem;
-            padding:.3rem .8rem; border-radius:20px; white-space:nowrap;
-        }
+        #selectionScreen { display: block; }
+        #entryScreen { display: none; }
 
-        /* ── CARD ── */
+        .header { text-align: center; padding: 1.5rem 0 1rem; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; color: var(--gold-light); }
+        .header p { font-size: 0.85rem; color: var(--ink-muted); margin-top: 0.3rem; }
+
         .card {
-            background:rgba(255,255,255,.95);
-            border-radius:24px; padding:1rem 1.2rem;
-            margin-bottom:1.2rem;
-            box-shadow:0 8px 20px rgba(0,0,0,.1);
-            border:1px solid rgba(244,180,0,.6);
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(244,180,0,0.25);
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(8px);
+        }
+        .card h2 {
+            font-size: 0.9rem;
+            color: var(--gold-light);
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        /* ── MODAL ── */
-        .overlay {
-            position:fixed; inset:0;
-            background:rgba(0,0,0,.55);
-            display:flex; align-items:center; justify-content:center;
-            z-index:200; backdrop-filter:blur(4px);
-        }
-        .overlay.hidden { display:none; }
-        .modal-box {
-            background:white; border-radius:24px;
-            padding:1.5rem; width:92%; max-width:360px;
-            box-shadow:0 20px 50px rgba(0,0,0,.3);
-            animation:popIn .2s ease;
-        }
-        @keyframes popIn { from{transform:scale(.85);opacity:0} to{transform:scale(1);opacity:1} }
-        .modal-title {
-            font-size:1rem; font-weight:700; color:var(--navy);
-            margin-bottom:1.2rem; text-align:center;
-        }
-        .modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
-        .modal-grid.three { grid-template-columns:1fr 1fr 1fr; }
-        .modal-btn {
-            padding:.9rem .5rem; border-radius:16px;
-            border:2px solid var(--gold);
-            background:white; color:var(--navy);
-            font-weight:700; font-size:.85rem;
-            cursor:pointer; transition:all .18s; text-align:center;
-        }
-        .modal-btn:hover { background:var(--gold); transform:scale(1.04); }
+        .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+        .choice-grid.three { grid-template-columns: 1fr 1fr 1fr; }
 
-        /* ── FORMULAIRE ── */
-        .form-vertical { display:flex; flex-direction:column; gap:.9rem; margin-bottom:1rem; }
-        .field-group   { display:flex; flex-direction:column; gap:.2rem; }
-        .row-two { display:flex; gap:1rem; }
-        .row-two .field-group { flex:1; }
-        label {
-            font-weight:700; font-size:.7rem;
-            text-transform:uppercase; color:var(--blue);
+        .choice-btn {
+            padding: 1rem 0.5rem;
+            border-radius: 14px;
+            border: 2px solid rgba(244,180,0,0.3);
+            background: rgba(255,255,255,0.05);
+            color: var(--ink);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
         }
-        input {
-            padding:.5rem .7rem; border-radius:20px;
-            border:1.5px solid var(--gold);
-            font-size:.78rem; background:white; width:100%;
-        }
-        input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(30,47,107,.15); }
-        .valid   { border-color:var(--green) !important; background:#f0fdf4; }
-        .invalid { border-color:var(--red)   !important; background:#fef2f2; }
-        .desig-text {
-            font-size:.75rem; font-weight:500; color:var(--blue);
-            min-height:1rem; margin-top:2px; padding-left:4px;
+        .choice-btn:hover { border-color: var(--gold); background: rgba(244,180,0,0.1); }
+        .choice-btn.selected {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, var(--gold) 0%, #d99a00 100%);
+            color: var(--navy-deep);
         }
 
-        /* ── BOUTONS ── */
-        .btn-row { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:.3rem; }
-        button {
-            padding:.5rem 1.2rem; border-radius:40px;
-            font-weight:700; font-size:.8rem; border:none;
-            cursor:pointer; transition:all .2s;
-            display:inline-flex; align-items:center; gap:.4rem;
+        .btn-primary {
+            width: 100%;
+            padding: 0.9rem;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, var(--gold) 0%, #d99a00 100%);
+            color: var(--navy-deep);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: 0.2s;
         }
-        .btn-add     { background:var(--gold);  color:var(--navy); }
-        .btn-add:disabled { background:#e2e8f0; color:#94a3b8; cursor:not-allowed; }
-        .btn-nonbase { background:white; color:var(--red); border:2px solid #ef4444; }
-        .btn-save    { background:var(--green); color:white; }
-        .btn-cancel  { background:#e2e8f0; color:#374151; }
+        .btn-primary:disabled { background: #555; color: #999; cursor: not-allowed; }
+        .btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244,180,0,0.3); }
 
-        /* ── TABLE SAISIE ── */
-        .tbl-wrap { overflow-x:auto; border-radius:16px; border:1px solid var(--gold); background:white; }
-        table { width:100%; border-collapse:collapse; font-size:.73rem; }
-        th { background:#fef9e6; padding:.55rem .5rem; text-align:left; border-bottom:2px solid var(--gold); white-space:nowrap; }
-        td { padding:.45rem .5rem; border-bottom:1px solid #fef3c7; }
-        .del-btn { background:var(--red); color:white; padding:.2rem .6rem; border-radius:30px; font-size:.68rem; }
-
-        /* ── VISU TABLEUR ── */
-        #visuSection { display:none; }
-        .tabs { display:flex; gap:.5rem; margin-bottom:.8rem; flex-wrap:wrap; }
-        .tab-btn {
-            padding:.45rem 1rem; border-radius:20px;
-            border:2px solid var(--gold); background:white;
-            color:var(--navy); font-weight:600; font-size:.78rem;
-            cursor:pointer; transition:all .18s;
+        .btn-back {
+            background: transparent;
+            border: 1px solid rgba(244,180,0,0.4);
+            color: var(--gold-light);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-bottom: 0.8rem;
         }
-        .tab-btn.active { background:var(--gold); }
-        #hotContainer { width:100%; overflow:hidden; border-radius:12px; }
-        /* forcer hauteur Handsontable */
-        #hotContainer .handsontable { font-size:.75rem; }
 
-        /* ── STATUT ── */
+        .context-badge { display: inline-flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+        .badge {
+            background: rgba(244,180,0,0.15);
+            border: 1px solid rgba(244,180,0,0.4);
+            color: var(--gold-light);
+            padding: 0.25rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .field-group { margin-bottom: 0.8rem; }
+        .field-group label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            margin-bottom: 0.25rem;
+        }
+        .field-group input {
+            width: 100%;
+            padding: 0.65rem 0.8rem;
+            border-radius: 12px;
+            border: 1.5px solid rgba(244,180,0,0.35);
+            background: rgba(255,255,255,0.08);
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+        .field-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 2px rgba(244,180,0,0.2);
+        }
+        .field-group input.valid { border-color: #10b981; background: rgba(16,185,129,0.1); }
+        .field-group input.invalid { border-color: #ef4444; background: rgba(239,68,68,0.1); }
+
+        .row-2 { display: flex; gap: 0.7rem; }
+        .row-2 .field-group { flex: 1; }
+
+        .designation-box {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.85rem;
+            color: var(--gold-light);
+            min-height: 2.4rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .btn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .btn {
+            padding: 0.7rem 1.1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+        .btn-add { background: var(--gold); color: var(--navy-deep); flex: 1; }
+        .btn-add:disabled { background: #555; color: #999; cursor: not-allowed; }
+        .btn-nonbase { background: transparent; border: 2px solid #ef4444; color: #fca5a5; }
+        .btn-save { background: var(--blue); color: white; width: 100%; margin-top: 0.6rem; }
+
         .status-bar {
-            position:fixed; bottom:12px; right:12px;
-            background:#2d4593cc; color:white;
-            padding:5px 14px; border-radius:20px;
-            font-size:.7rem; pointer-events:none;
-            z-index:300; opacity:0; transition:opacity .3s;
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30,47,107,0.92);
+            color: white;
+            padding: 0.4rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
         }
-        .info-scan { font-size:.68rem; text-align:center; color:#1e6f9f; margin-top:3px; }
-        footer { text-align:center; margin-top:.8rem; font-size:.63rem; color:#2c5a7a; }
+        .status-bar.show { opacity: 1; }
 
-        @media(max-width:480px){
-            .row-two{flex-wrap:wrap}
-            .btn-row{justify-content:center}
-            .modal-grid.three{grid-template-columns:1fr 1fr}
+        .table-card { margin-top: 1rem; }
+        .table-wrapper { overflow-x: auto; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        th {
+            background: rgba(244,180,0,0.15);
+            color: var(--gold-light);
+            padding: 0.5rem 0.4rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+        td {
+            padding: 0.45rem 0.4rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            color: var(--ink);
+        }
+        tr.hors-base { background: rgba(239,68,68,0.12); }
+        .del-btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.15rem 0.45rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .info-scan { font-size: 0.7rem; color: var(--ink-muted); margin-top: 0.2rem; }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .overlay.show { display: flex; }
+        .modal {
+            background: var(--navy);
+            border: 1px solid rgba(244,180,0,0.4);
+            border-radius: 18px;
+            padding: 1.4rem;
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+        }
+        .modal h3 { color: var(--gold-light); margin-bottom: 0.6rem; font-size: 1.05rem; }
+        .modal p { color: var(--ink-muted); font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.4; white-space: pre-line; }
+        .modal-btns { display: flex; gap: 0.6rem; }
+        .modal-btns button { flex: 1; padding: 0.7rem; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; }
+        .modal-ok { background: var(--gold); color: var(--navy-deep); }
+        .modal-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--ink); }
+
+        @media (max-width: 400px) {
+            .choice-grid.three { grid-template-columns: 1fr; }
+            .row-2 { flex-direction: column; gap: 0; }
         }
     </style>
 </head>
 <body>
 <div class="container">
 
-    <!-- HEADER -->
-    <div class="header">
-        <button class="back-btn" onclick="history.back()">←</button>
-        <div class="header-info">
-            <div class="header-title">📦 Dlv & Prix</div>
-            <div class="header-sub" id="headerSub">Choisissez un emplacement</div>
+    <!-- SELECTION SCREEN -->
+    <div id="selectionScreen">
+        <div class="header">
+            <h1>DLV & Prix</h1>
+            <p>Choisissez le dossier puis la catégorie</p>
         </div>
-        <span class="badge" id="badge" style="display:none"></span>
+
+        <div class="card">
+            <h2>1. Dossier</h2>
+            <div class="choice-grid">
+                <button class="choice-btn" data-folder="KIBO4">KIBO4</button>
+                <button class="choice-btn" data-folder="KIBO2">KIBO2</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>2. Catégorie</h2>
+            <div class="choice-grid three">
+                <button class="choice-btn" data-cat="Épicerie">Épicerie</button>
+                <button class="choice-btn" data-cat="Boisson">Boisson</button>
+                <button class="choice-btn" data-cat="DPH">DPH</button>
+            </div>
+        </div>
+
+        <button class="btn-primary" id="btnStart" disabled>Continuer →</button>
     </div>
 
-    <!-- ZONE SAISIE -->
-    <div id="zoneSaisie" style="display:none">
+    <!-- ENTRY SCREEN -->
+    <div id="entryScreen">
+        <button class="btn-back" id="btnBack">← Retour</button>
+
+        <div class="context-badge">
+            <span class="badge" id="badgeFolder">—</span>
+            <span class="badge" id="badgeCat">—</span>
+        </div>
+
         <div class="card">
-            <div class="form-vertical">
+            <div class="field-group">
+                <label>Code-barres / Code article</label>
+                <input type="text" id="codeInput" placeholder="Scanner ou taper (double-clic = scanner)" autocomplete="off">
+                <div class="info-scan">💡 Double-clic pour ouvrir le scanner</div>
+            </div>
+
+            <div class="designation-box" id="designationBox">Désignation…</div>
+
+            <div class="row-2">
                 <div class="field-group">
-                    <label>🔍 Code barre / article *</label>
-                    <input type="text" id="codeInput"
-                           placeholder="Scanner ou taper (double-clic → scanner)"
-                           autocomplete="off">
-                    <div class="info-scan">💡 Double-clic sur ce champ pour ouvrir le scanner</div>
-                    <div class="desig-text" id="desigText"></div>
-                </div>
-                <div class="row-two">
-                    <div class="field-group">
-                        <label>📦 Quantité</label>
-                        <input type="number" id="qteInput" value="1" min="1" max="999999" inputmode="numeric">
-                    </div>
-                    <div class="field-group">
-                        <label>💰 Prix Normal (Ar)</label>
-                        <input type="number" id="prixInput" placeholder="Ariary" min="0" inputmode="numeric">
-                    </div>
+                    <label>Prix Normale (Ar)</label>
+                    <input type="number" id="prixNormale" placeholder="0" min="0" inputmode="numeric">
                 </div>
                 <div class="field-group">
-                    <label>📅 Dlv — Date de péremption</label>
-                    <input type="date" id="dlvInput">
+                    <label>Quantité</label>
+                    <input type="number" id="quantite" value="1" min="1" max="999999" inputmode="numeric">
                 </div>
             </div>
+
+            <div class="field-group">
+                <label>Date Limite de Vente (DLV)</label>
+                <input type="date" id="dlv">
+            </div>
+
             <div class="btn-row">
-                <button class="btn-add" id="addBtn" disabled>➕ Ajouter</button>
-                <button class="btn-nonbase" id="nonBaseBtn">⚠️ Hors base</button>
+                <button class="btn btn-add" id="addBtn" disabled>➕ Ajouter</button>
+                <button class="btn btn-nonbase" id="nonBaseBtn">⚠️ Hors base</button>
             </div>
         </div>
 
-        <!-- TABLE LOCALE -->
-        <div class="card" style="padding:.8rem">
-            <div class="tbl-wrap">
+        <div class="card table-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+                <h2 style="margin:0;font-size:0.85rem;color:var(--gold-light);">Lignes de la session</h2>
+                <span id="lineCount" style="font-size:0.75rem;color:var(--ink-muted);">0 ligne(s)</span>
+            </div>
+            <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
-                            <th>Code barre</th><th>Code art.</th><th>Désignation</th>
-                            <th>Qté</th><th>Prix (Ar)</th><th>Dlv</th><th></th>
+                            <th>Code Article</th>
+                            <th>Désignation</th>
+                            <th>DLV</th>
+                            <th>Qté</th>
+                            <th>Prix</th>
+                            <th></th>
                         </tr>
                     </thead>
-                    <tbody id="tblBody">
-                        <tr><td colspan="7" style="text-align:center;color:#888;padding:1rem">
-                            Aucune ligne. Saisissez un code.</td></tr>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" style="text-align:center;color:var(--ink-muted);">Aucune ligne</td></tr>
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- VISU TABLEUR (double-clic) -->
-        <div id="visuSection">
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;
-                            margin-bottom:.8rem;flex-wrap:wrap;gap:.5rem">
-                    <strong id="visuTitle" style="color:var(--navy);font-size:.9rem"></strong>
-                    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-                        <button class="btn-save"   id="saveVisuBtn">💾 Sauvegarder</button>
-                        <button class="btn-cancel" id="closeVisuBtn">✕ Fermer</button>
-                    </div>
-                </div>
-                <div class="tabs" id="visuTabs"></div>
-                <div id="hotContainer"></div>
-            </div>
+            <button class="btn btn-save" id="saveBtn">💾 Enregistrer dans Excel</button>
         </div>
     </div>
 </div>
 
-<!-- MODAL EMPLACEMENT -->
-<div id="modalEmpl" class="overlay">
-    <div class="modal-box">
-        <div class="modal-title">📍 Choisir l'emplacement</div>
-        <div class="modal-grid">
-            <button class="modal-btn" onclick="choisirEmpl('KIBO4')">🏪 KIBO4</button>
-            <button class="modal-btn" onclick="choisirEmpl('KIBO2')">🏬 KIBO2</button>
+<div class="status-bar" id="statusBar">Sauvegardé</div>
+
+<div class="overlay" id="alertOverlay">
+    <div class="modal">
+        <h3 id="alertTitle">Attention</h3>
+        <p id="alertMessage"></p>
+        <div class="modal-btns">
+            <button class="modal-cancel" id="alertCancel">Annuler</button>
+            <button class="modal-ok" id="alertOk">OK</button>
         </div>
     </div>
 </div>
-
-<!-- MODAL CATÉGORIE (simple clic) -->
-<div id="modalCat" class="overlay hidden">
-    <div class="modal-box">
-        <div class="modal-title" id="modalCatTitle">📂 Choisir la catégorie</div>
-        <div class="modal-grid three">
-            <button class="modal-btn" onclick="choisirCat('Épicerie')">🛒 Épicerie</button>
-            <button class="modal-btn" onclick="choisirCat('Boisson')">🥤 Boisson</button>
-            <button class="modal-btn" onclick="choisirCat('DPH')">🧴 DPH</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL EMPLACEMENT VISU (double-clic) -->
-<div id="modalVisuEmpl" class="overlay hidden">
-    <div class="modal-box">
-        <div class="modal-title">📊 Ouvrir le tableur — quel emplacement ?</div>
-        <div class="modal-grid">
-            <button class="modal-btn" onclick="ouvrirVisu('KIBO4')">🏪 KIBO4</button>
-            <button class="modal-btn" onclick="ouvrirVisu('KIBO2')">🏬 KIBO2</button>
-        </div>
-    </div>
-</div>
-
-<div class="status-bar" id="statusBar">💾 Enregistré</div>
 
 <script>
-// ════════════════════════════════════════════════
-// CONFIG
-// ════════════════════════════════════════════════
-const DB_URL      = 'https://raw.githubusercontent.com/hasiniainahasina1-art/BOTAKI/main/database.xlsx';
-const SHEETS      = ['Épicerie','Boisson','DPH'];
-const COLS        = ['Code Barre','Code Article','Désignation','Prix Normal','Prix Promo','Quantité','Dlv'];
-const STORE_KEY   = 'BOTAKI_dlv_v3';
+(function () {
+    const EXCEL_URL = '/database.xlsx';
+    const API_URL = '/api/dlv-prix';
 
-// ════════════════════════════════════════════════
-// ÉTAT
-// ════════════════════════════════════════════════
-let empl        = null;   // KIBO4 | KIBO2
-let cat         = null;   // Épicerie | Boisson | DPH
-let modeDouble  = false;  // true = arrivée via double-clic index.html
-let produitsDB  = [];
-let lignes      = [];
-let lastProduit = null;
-let baseOk      = false;
-let enCours     = false;
+    let selectedFolder = null;
+    let selectedCat = null;
+    let produitsDB = [];
+    let baseChargee = false;
+    let sessionLignes = [];
+    let remoteSheets = null;
+    let remoteSha = null;
+    let dernierProduit = null;
 
-// Handsontable
-let hotInstance   = null;
-let visuSheets    = {};   // { 'Épicerie': [[row],...], ... }
-let activeSheet   = SHEETS[0];
-let visuEmpl      = null; // emplacement du tableur ouvert
+    const selectionScreen = document.getElementById('selectionScreen');
+    const entryScreen = document.getElementById('entryScreen');
+    const btnStart = document.getElementById('btnStart');
+    const btnBack = document.getElementById('btnBack');
+    const badgeFolder = document.getElementById('badgeFolder');
+    const badgeCat = document.getElementById('badgeCat');
+    const codeInput = document.getElementById('codeInput');
+    const designationBox = document.getElementById('designationBox');
+    const prixNormale = document.getElementById('prixNormale');
+    const quantite = document.getElementById('quantite');
+    const dlv = document.getElementById('dlv');
+    const addBtn = document.getElementById('addBtn');
+    const nonBaseBtn = document.getElementById('nonBaseBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const tableBody = document.getElementById('tableBody');
+    const lineCount = document.getElementById('lineCount');
+    const statusBar = document.getElementById('statusBar');
+    const alertOverlay = document.getElementById('alertOverlay');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertMessage = document.getElementById('alertMessage');
+    const alertOk = document.getElementById('alertOk');
+    const alertCancel = document.getElementById('alertCancel');
 
-// ════════════════════════════════════════════════
-// DÉTECTION MODE (simple / double clic)
-// Paramètre URL : ?mode=view transmis par index.html
-// ════════════════════════════════════════════════
-(function detectMode() {
-    const params = new URLSearchParams(window.location.search);
-    modeDouble = params.get('mode') === 'view';
-    if (modeDouble) {
-        // Cacher zone saisie, afficher direct modal emplacement visu
-        document.getElementById('modalEmpl').classList.add('hidden');
-        document.getElementById('modalVisuEmpl').classList.remove('hidden');
-        document.getElementById('zoneSaisie').style.display = '';
-        document.getElementById('headerSub').textContent = 'Mode visualisation — choisissez l\'emplacement';
+    function normaliser(code) {
+        return (code || '').toString().replace(/[\s.\-]/g, '').toLowerCase();
     }
-})();
 
-// ════════════════════════════════════════════════
-// MODALS
-// ════════════════════════════════════════════════
-function choisirEmpl(val) {
-    empl = val;
-    document.getElementById('modalEmpl').classList.add('hidden');
-    document.getElementById('modalCat').classList.remove('hidden');
-    document.getElementById('modalCatTitle').textContent = `📂 Catégorie — ${empl}`;
-}
+    function showStatus(msg) {
+        statusBar.textContent = msg;
+        statusBar.classList.add('show');
+        setTimeout(() => statusBar.classList.remove('show'), 2200);
+    }
 
-function choisirCat(val) {
-    cat = val;
-    document.getElementById('modalCat').classList.add('hidden');
-    majHeader();
-    document.getElementById('zoneSaisie').style.display = '';
-    chargerLignesLocales();
-    renderTable();
-    if (!baseOk) chargerBase();
-}
+    function parseDlvTs(str) {
+        if (!str) return 0;
+        const m = String(str).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (!m) return 0;
+        return new Date(+m[3], +m[2] - 1, +m[1]).getTime() || 0;
+    }
 
-function majHeader() {
-    document.getElementById('badge').textContent = empl + (cat ? ' › ' + cat : '');
-    document.getElementById('badge').style.display = '';
-    document.getElementById('headerSub').textContent =
-        `Emplacement : ${empl}` + (cat ? ` • Catégorie : ${cat}` : '');
-}
+    function formaterDateFr(iso) {
+        if (!iso) return '';
+        const [y, m, d] = iso.split('-');
+        return `${d}/${m}/${y}`;
+    }
 
-// ════════════════════════════════════════════════
-// STOCKAGE LOCAL
-// ════════════════════════════════════════════════
-function storeKey() { return `${STORE_KEY}_${empl}_${cat}`; }
+    function showAlert(title, message) {
+        return new Promise(resolve => {
+            alertTitle.textContent = title;
+            alertMessage.textContent = message;
+            alertOverlay.classList.add('show');
+            const onOk = () => { cleanup(); resolve(true); };
+            const onCancel = () => { cleanup(); resolve(false); };
+            function cleanup() {
+                alertOverlay.classList.remove('show');
+                alertOk.removeEventListener('click', onOk);
+                alertCancel.removeEventListener('click', onCancel);
+            }
+            alertOk.addEventListener('click', onOk);
+            alertCancel.addEventListener('click', onCancel);
+        });
+    }
 
-function chargerLignesLocales() {
-    try {
-        const s = localStorage.getItem(storeKey());
-        lignes = s ? JSON.parse(s) : [];
-        if (!Array.isArray(lignes)) lignes = [];
-    } catch(e) { lignes = []; }
-}
+    // Selection
+    document.querySelectorAll('[data-folder]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-folder]').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedFolder = btn.dataset.folder;
+            btnStart.disabled = !(selectedFolder && selectedCat);
+        });
+    });
+    document.querySelectorAll('[data-cat]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedCat = btn.dataset.cat;
+            btnStart.disabled = !(selectedFolder && selectedCat);
+        });
+    });
 
-function sauvegarderLocal() {
-    if (empl && cat) localStorage.setItem(storeKey(), JSON.stringify(lignes));
-    showStatus('💾 Sauvegardé localement');
-}
+    btnStart.addEventListener('click', async () => {
+        badgeFolder.textContent = selectedFolder;
+        badgeCat.textContent = selectedCat;
+        selectionScreen.style.display = 'none';
+        entryScreen.style.display = 'block';
+        sessionLignes = [];
+        renderSessionTable();
+        showStatus('Chargement…');
+        await Promise.all([chargerBase(), chargerRemote()]);
+        showStatus('Prêt');
+        codeInput.focus();
+    });
 
-// ════════════════════════════════════════════════
-// BASE DE DONNÉES PRODUITS
-// ════════════════════════════════════════════════
-async function chargerBase() {
-    try {
-        const ctrl = new AbortController();
-        const tid  = setTimeout(() => ctrl.abort(), 20000);
-        const resp = await fetch(DB_URL, { cache:'no-store', signal:ctrl.signal });
-        clearTimeout(tid);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const ab = await resp.arrayBuffer();
-        const wb = XLSX.read(ab, { type:'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
-        let start = 0;
-        if (rows[0] && rows[0][0] && rows[0][0].toString().toLowerCase().includes('code')) start = 1;
-        produitsDB = [];
-        for (let i = start; i < rows.length; i++) {
-            const r = rows[i];
-            const cb = (r[0]||'').toString().trim();
-            const ca = (r[1]||'').toString().trim();
-            const ds = (r[2]||'').toString().trim() || `Produit ${cb||ca}`;
-            if (cb||ca) produitsDB.push({ codeBarre:cb, codeArticle:ca, designation:ds });
+    btnBack.addEventListener('click', () => {
+        entryScreen.style.display = 'none';
+        selectionScreen.style.display = 'block';
+        sessionLignes = [];
+    });
+
+    async function chargerBase() {
+        try {
+            const resp = await fetch(EXCEL_URL, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('Impossible de charger la base');
+            const buf = await resp.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+            let start = 0;
+            if (rows[0] && /code|barre|article|désign/i.test(String(rows[0][0]))) start = 1;
+            produitsDB = [];
+            for (let i = start; i < rows.length; i++) {
+                const r = rows[i];
+                if (!r || (!r[0] && !r[1])) continue;
+                produitsDB.push({
+                    codeBarre: String(r[0] || '').trim(),
+                    codeArticle: String(r[1] || '').trim(),
+                    designation: String(r[2] || '').trim()
+                });
+            }
+            baseChargee = true;
+        } catch (e) {
+            console.error(e);
+            baseChargee = false;
+            await showAlert('Erreur', 'Impossible de charger la base articles. Vous pouvez quand même saisir en hors-base.');
         }
-        baseOk = true;
-    } catch(e) { console.error('chargerBase:', e); }
-}
-
-// ════════════════════════════════════════════════
-// FORMULAIRE SAISIE
-// ════════════════════════════════════════════════
-const codeInput = document.getElementById('codeInput');
-const dlvInput  = document.getElementById('dlvInput');
-const desigText = document.getElementById('desigText');
-const qteInput  = document.getElementById('qteInput');
-const prixInput = document.getElementById('prixInput');
-const addBtn    = document.getElementById('addBtn');
-
-function norm(s) { return (s||'').toString().replace(/[\s.\-]/g,''); }
-
-function chercherProduit(id) {
-    if (!id.trim() || !baseOk) return null;
-    const n = norm(id.trim());
-    return produitsDB.find(p => norm(p.codeBarre)===n || norm(p.codeArticle)===n) || null;
-}
-
-function majDesig() {
-    const code = codeInput.value.trim();
-    if (!code) { desigText.textContent=''; lastProduit=null; addBtn.disabled=true; codeInput.className=''; return; }
-    const p = chercherProduit(code);
-    if (p) {
-        desigText.textContent = '✅ ' + p.designation;
-        lastProduit = p;
-        addBtn.disabled = false;
-        codeInput.classList.add('valid'); codeInput.classList.remove('invalid');
-    } else {
-        desigText.textContent = '❌ Non trouvé';
-        lastProduit = null; addBtn.disabled = true;
-        codeInput.classList.remove('valid'); codeInput.classList.add('invalid');
     }
-}
 
-function resetChamps() {
-    codeInput.value=''; dlvInput.value=''; qteInput.value='1'; prixInput.value='';
-    desigText.textContent=''; lastProduit=null; addBtn.disabled=true;
-    codeInput.className=''; codeInput.focus();
-}
-
-function dateFr(dateStr) {
-    if (!dateStr) return '';
-    const [y,m,d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-}
-
-// ════════════════════════════════════════════════
-// TABLE LOCALE
-// ════════════════════════════════════════════════
-function renderTable() {
-    const tb = document.getElementById('tblBody');
-    if (!lignes.length) {
-        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:1rem">Aucune ligne.</td></tr>';
-        return;
+    async function chargerRemote() {
+        try {
+            const resp = await fetch(`${API_URL}?folder=${selectedFolder}`);
+            const data = await resp.json();
+            if (!data.success) throw new Error(data.error || 'Erreur API');
+            remoteSheets = data.sheets;
+            remoteSha = data.sha;
+        } catch (e) {
+            console.error(e);
+            remoteSheets = { 'Épicerie': [], 'Boisson': [], 'DPH': [] };
+            remoteSha = null;
+        }
     }
-    tb.innerHTML = lignes.map((l,i) => `
-        <tr style="${l.horsBase?'background:#fee2e2':''}">
-            <td>${l.codeBarre||'—'}</td>
-            <td>${l.codeArticle||'—'}</td>
-            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                title="${l.designation}">${l.designation}</td>
-            <td>${l.quantite}</td>
-            <td>${l.prixNormal||0} Ar</td>
-            <td>${dateFr(l.dlv)}</td>
-            <td><button class="del-btn" onclick="delLigne(${i})">🗑️</button></td>
-        </tr>`).join('');
-}
 
-function delLigne(i) { lignes.splice(i,1); renderTable(); sauvegarderLocal(); }
+    function rechercherProduit(code) {
+        const n = normaliser(code);
+        if (!n) return null;
+        return produitsDB.find(p =>
+            normaliser(p.codeBarre) === n || normaliser(p.codeArticle) === n
+        ) || null;
+    }
 
-// ════════════════════════════════════════════════
-// AJOUT
-// ════════════════════════════════════════════════
-async function ajouterBase() {
-    if (!lastProduit) return;
-    await envoyerLigne({
-        codeBarre:   lastProduit.codeBarre,
-        codeArticle: lastProduit.codeArticle,
-        designation: lastProduit.designation,
-        quantite:    parseInt(qteInput.value)||1,
-        prixNormal:  parseFloat(prixInput.value)||0,
-        dlv:         dlvInput.value,
-        horsBase:    false
-    });
-}
-
-async function ajouterHorsBase() {
-    const code = codeInput.value.trim();
-    if (!code) { alert('Saisissez un code.'); return; }
-    await envoyerLigne({
-        codeBarre:   code.length!==8 ? code : '',
-        codeArticle: code.length===8 ? code : '',
-        designation: '⚠️ HORS BASE',
-        quantite:    parseInt(qteInput.value)||1,
-        prixNormal:  parseFloat(prixInput.value)||0,
-        dlv:         dlvInput.value,
-        horsBase:    true
-    });
-}
-
-async function envoyerLigne(ligne) {
-    if (enCours) return;
-    enCours = true; addBtn.disabled = true;
-    showStatus('⏳ Envoi en cours…');
-    try {
-        const resp = await fetch('/api/upload-dlv', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ emplacement:empl, categorie:cat, ligne, mode:'write' })
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error||'Erreur serveur');
-        lignes.unshift(ligne);
-        renderTable(); sauvegarderLocal();
-        showStatus('✅ Enregistré sur GitHub');
-        resetChamps();
-    } catch(e) {
-        showStatus('❌ ' + e.message);
-        alert('Erreur : ' + e.message);
-    } finally { enCours=false; addBtn.disabled=false; }
-}
-
-// ════════════════════════════════════════════════
-// VISUALISATION TABLEUR (Handsontable)
-// ════════════════════════════════════════════════
-async function ouvrirVisu(emplVal) {
-    visuEmpl = emplVal;
-    document.getElementById('modalVisuEmpl').classList.add('hidden');
-    document.getElementById('zoneSaisie').style.display = '';
-    document.getElementById('visuSection').style.display = '';
-    document.getElementById('visuTitle').textContent = `📊 Tableur — dlv_${visuEmpl}.xlsx`;
-
-    if (!empl) { empl = visuEmpl; majHeader(); }
-
-    document.getElementById('hotContainer').innerHTML =
-        '<div style="text-align:center;padding:1.5rem;color:#888">⏳ Chargement du fichier Excel…</div>';
-
-    try {
-        const resp = await fetch('/api/upload-dlv', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ emplacement:visuEmpl, categorie: cat||'Épicerie', mode:'read' })
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error||'Erreur serveur');
-
-        if (!data.exists) {
-            document.getElementById('hotContainer').innerHTML =
-                '<div style="text-align:center;padding:1.5rem;color:#888">Aucune donnée pour cet emplacement.</div>';
+    function mettreAJourDesignation() {
+        const code = codeInput.value.trim();
+        if (!code) {
+            designationBox.textContent = 'Désignation…';
+            codeInput.classList.remove('valid', 'invalid');
+            addBtn.disabled = true;
+            dernierProduit = null;
             return;
         }
-
-        visuSheets = data.sheets;
-        activeSheet = cat || SHEETS[0];
-        renderTabs();
-        renderHot();
-    } catch(e) {
-        document.getElementById('hotContainer').innerHTML =
-            `<div style="text-align:center;padding:1rem;color:red">❌ ${e.message}</div>`;
+        const p = rechercherProduit(code);
+        if (p) {
+            designationBox.textContent = p.designation || '(sans désignation)';
+            codeInput.classList.add('valid');
+            codeInput.classList.remove('invalid');
+            addBtn.disabled = false;
+            dernierProduit = p;
+        } else {
+            designationBox.textContent = '⚠️ Produit non trouvé dans la base';
+            codeInput.classList.add('invalid');
+            codeInput.classList.remove('valid');
+            addBtn.disabled = true;
+            dernierProduit = null;
+        }
     }
-}
 
-function renderTabs() {
-    document.getElementById('visuTabs').innerHTML = SHEETS.map(s =>
-        `<button class="tab-btn ${s===activeSheet?'active':''}" onclick="switchTab('${s}')">${s}</button>`
-    ).join('');
-}
+    codeInput.addEventListener('input', mettreAJourDesignation);
+    codeInput.addEventListener('blur', mettreAJourDesignation);
 
-function switchTab(s) {
-    // Sauvegarder les données du HOT avant de changer d'onglet
-    if (hotInstance) {
-        visuSheets[activeSheet] = hotInstance.getData();
-        // Remettre les en-têtes
-        visuSheets[activeSheet].unshift(COLS);
-    }
-    activeSheet = s;
-    renderTabs();
-    renderHot();
-}
-
-function renderHot() {
-    const container = document.getElementById('hotContainer');
-    container.innerHTML = '';
-
-    const allRows = visuSheets[activeSheet] || [];
-    // Séparer en-tête et données
-    let dataRows = allRows.length > 1 ? allRows.slice(1) : [Array(COLS.length).fill('')];
-
-    // Trier par Dlv (colonne 6) — date la plus récente en haut
-    // Format attendu : DD/MM/YYYY ou YYYY-MM-DD
-    function dlvVersTimestamp(val) {
-        if (!val) return -Infinity;
-        const s = val.toString().trim();
-        // Format DD/MM/YYYY
-        const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (m1) return new Date(m1[3], m1[2]-1, m1[1]).getTime();
-        // Format YYYY-MM-DD
-        const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (m2) return new Date(m2[1], m2[2]-1, m2[3]).getTime();
-        return -Infinity;
-    }
-    dataRows = dataRows.slice().sort((a, b) => dlvVersTimestamp(b[6]) - dlvVersTimestamp(a[6]));
-
-    if (hotInstance) { hotInstance.destroy(); hotInstance = null; }
-
-    const isMobile = window.innerWidth < 600;
-    const colWidths = isMobile
-        ? [80,80,120,70,70,60,80]
-        : [110,110,180,100,100,80,100];
-
-    hotInstance = new Handsontable(container, {
-        data: dataRows,
-        colHeaders: COLS,
-        rowHeaders: true,
-        height: Math.min(500, Math.max(200, dataRows.length * 26 + 60)),
-        width: '100%',
-        colWidths: colWidths,
-        licenseKey: 'non-commercial-and-evaluation',
-        stretchH: 'all',
-        contextMenu: true,
-        manualColumnResize: true,
-        manualRowResize: true,
-        filters: true,
-        dropdownMenu: true,
-        autoWrapRow: true,
-        autoWrapCol: true,
-        afterChange(changes) {
-            if (!changes) return;
-            // Mettre à jour visuSheets en temps réel
-            const rows = [COLS, ...hotInstance.getData()];
-            visuSheets[activeSheet] = rows;
+    codeInput.addEventListener('dblclick', () => window.open('scan.html', '_blank'));
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'scannedCode' && e.newValue) {
+            codeInput.value = e.newValue;
+            codeInput.dispatchEvent(new Event('input'));
+            localStorage.removeItem('scannedCode');
+            dlv.focus();
         }
     });
-}
 
-// Sauvegarder vers GitHub
-document.getElementById('saveVisuBtn').onclick = async () => {
-    // Récupérer les dernières données du tableur
-    if (hotInstance) {
-        visuSheets[activeSheet] = [COLS, ...hotInstance.getData()];
+    function buildLigne(prod, horsBase) {
+        return {
+            codeBarre: horsBase ? codeInput.value.trim() : (prod.codeBarre || codeInput.value.trim()),
+            codeArticle: horsBase ? codeInput.value.trim() : (prod.codeArticle || ''),
+            designation: horsBase ? (codeInput.value.trim() || 'Hors base') : (prod.designation || ''),
+            prixNormale: prixNormale.value || '',
+            prixPromo: '',
+            quantite: quantite.value || '1',
+            dlv: formaterDateFr(dlv.value) || '',
+            horsBase: !!horsBase
+        };
     }
-    showStatus('⏳ Sauvegarde en cours…');
-    try {
-        const resp = await fetch('/api/upload-dlv', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ emplacement:visuEmpl, categorie:cat||'Épicerie', sheets:visuSheets, mode:'save' })
+
+    function resetForm() {
+        codeInput.value = '';
+        designationBox.textContent = 'Désignation…';
+        codeInput.classList.remove('valid', 'invalid');
+        prixNormale.value = '';
+        quantite.value = '1';
+        dlv.value = '';
+        addBtn.disabled = true;
+        dernierProduit = null;
+        codeInput.focus();
+    }
+
+    async function ajouterDepuisBase() {
+        if (!dernierProduit) return;
+        const ligne = buildLigne(dernierProduit, false);
+        await ajouterOuMaj(ligne);
+    }
+
+    async function ajouterHorsBase() {
+        const code = codeInput.value.trim();
+        if (!code) {
+            await showAlert('Attention', 'Veuillez saisir un code-barres ou code article.');
+            return;
+        }
+        if (dernierProduit) {
+            const ok = await showAlert(
+                'Produit trouvé',
+                `Ce code correspond à « ${dernierProduit.designation} ».\nVoulez-vous quand même l'ajouter comme hors-base ?`
+            );
+            if (!ok) return;
+        } else {
+            const ok = await showAlert(
+                'Produit non trouvé',
+                'Ce code n\'existe pas dans la base.\nVérifiez le code-barres ou le code article.\n\nCliquez OK si le code est exact pour l\'ajouter en hors-base.'
+            );
+            if (!ok) return;
+        }
+        const ligne = buildLigne(dernierProduit || { codeBarre: code, codeArticle: code, designation: code }, true);
+        await ajouterOuMaj(ligne);
+    }
+
+    async function ajouterOuMaj(ligne) {
+        const idxSession = sessionLignes.findIndex(l =>
+            (l.codeArticle && ligne.codeArticle && normaliser(l.codeArticle) === normaliser(ligne.codeArticle)) ||
+            (l.codeBarre && ligne.codeBarre && normaliser(l.codeBarre) === normaliser(ligne.codeBarre))
+        );
+        const remoteList = (remoteSheets && remoteSheets[selectedCat]) || [];
+        const idxRemote = remoteList.findIndex(l =>
+            (l.codeArticle && ligne.codeArticle && normaliser(l.codeArticle) === normaliser(ligne.codeArticle)) ||
+            (l.codeArticle && ligne.codeBarre && normaliser(l.codeArticle) === normaliser(ligne.codeBarre))
+        );
+
+        if (idxSession >= 0 || idxRemote >= 0) {
+            const ok = await showAlert(
+                'Produit déjà présent',
+                'Ce produit existe déjà. Voulez-vous le mettre à jour avec les nouvelles valeurs ?'
+            );
+            if (!ok) return;
+            if (idxSession >= 0) sessionLignes[idxSession] = ligne;
+            else sessionLignes.push(ligne);
+        } else {
+            sessionLignes.push(ligne);
+        }
+        renderSessionTable();
+        resetForm();
+        showStatus('Ligne ajoutée');
+    }
+
+    addBtn.addEventListener('click', ajouterDepuisBase);
+    nonBaseBtn.addEventListener('click', ajouterHorsBase);
+
+    function renderSessionTable() {
+        lineCount.textContent = `${sessionLignes.length} ligne(s)`;
+        if (sessionLignes.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-muted);">Aucune ligne</td></tr>';
+            return;
+        }
+        tableBody.innerHTML = sessionLignes.map((l, i) => `
+            <tr class="${l.horsBase ? 'hors-base' : ''}">
+                <td>${escapeHtml(l.codeArticle || l.codeBarre)}</td>
+                <td>${escapeHtml(l.designation)}</td>
+                <td>${l.dlv || '—'}</td>
+                <td>${l.quantite || '—'}</td>
+                <td>${l.prixNormale || '—'}</td>
+                <td><button class="del-btn" data-i="${i}">✕</button></td>
+            </tr>
+        `).join('');
+        tableBody.querySelectorAll('.del-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                sessionLignes.splice(parseInt(btn.dataset.i), 1);
+                renderSessionTable();
+            });
         });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error||'Erreur');
-        showStatus('✅ Sauvegardé sur GitHub');
-    } catch(e) {
-        showStatus('❌ ' + e.message);
-        alert('Erreur sauvegarde : ' + e.message);
     }
-};
 
-document.getElementById('closeVisuBtn').onclick = () => {
-    document.getElementById('visuSection').style.display = 'none';
-    if (hotInstance) { hotInstance.destroy(); hotInstance = null; }
-};
-
-// ════════════════════════════════════════════════
-// SCANNER
-// ════════════════════════════════════════════════
-codeInput.addEventListener('dblclick', () => {
-    window.open('scan.html','_blank','width=420,height=600');
-});
-
-window.addEventListener('storage', e => {
-    if (e.key==='scannedCode' && e.newValue) {
-        codeInput.value = e.newValue;
-        majDesig();
-        localStorage.removeItem('scannedCode');
-        dlvInput.focus();
+    function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
-});
 
-// ════════════════════════════════════════════════
-// ÉVÉNEMENTS
-// ════════════════════════════════════════════════
-codeInput.addEventListener('input', majDesig);
-codeInput.addEventListener('blur',  majDesig);
-addBtn.onclick = ajouterBase;
-document.getElementById('nonBaseBtn').onclick = ajouterHorsBase;
-
-// ════════════════════════════════════════════════
-// STATUT
-// ════════════════════════════════════════════════
-function showStatus(msg) {
-    const bar = document.getElementById('statusBar');
-    bar.textContent = msg; bar.style.opacity = '1';
-    setTimeout(() => { bar.style.opacity='0'; }, 2000);
-}
+    saveBtn.addEventListener('click', async () => {
+        if (sessionLignes.length === 0) {
+            await showAlert('Info', 'Aucune ligne à enregistrer.');
+            return;
+        }
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Enregistrement…';
+        showStatus('Enregistrement en cours…');
+        try {
+            await chargerRemote();
+            const sheetRows = (remoteSheets[selectedCat] || []).slice();
+            const nouvelles = [];
+            for (const ligne of sessionLignes) {
+                const idx = sheetRows.findIndex(r =>
+                    (r.codeArticle && ligne.codeArticle && normaliser(r.codeArticle) === normaliser(ligne.codeArticle)) ||
+                    (r.codeArticle && ligne.codeBarre && normaliser(r.codeArticle) === normaliser(ligne.codeBarre))
+                );
+                const rowData = {
+                    codeArticle: ligne.codeArticle || ligne.codeBarre || '',
+                    designation: ligne.designation,
+                    dlv: ligne.dlv,
+                    quantite: ligne.quantite,
+                    prixNormale: ligne.prixNormale,
+                    prixPromo: ligne.prixPromo || ''
+                };
+                if (idx >= 0) {
+                    if (!rowData.prixPromo && sheetRows[idx].prixPromo) {
+                        rowData.prixPromo = sheetRows[idx].prixPromo;
+                    }
+                    sheetRows[idx] = rowData;
+                } else {
+                    nouvelles.push(rowData);
+                }
+            }
+            // Fusion puis tri par DLV la plus proche (ancienne) en haut
+            const finalRows = [...nouvelles, ...sheetRows];
+            finalRows.sort((a, b) => {
+                const ta = parseDlvTs(a.dlv) || Number.MAX_SAFE_INTEGER;
+                const tb = parseDlvTs(b.dlv) || Number.MAX_SAFE_INTEGER;
+                return ta - tb;
+            });
+            const newSheets = { ...remoteSheets, [selectedCat]: finalRows };
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folder: selectedFolder, sheets: newSheets, sha: remoteSha })
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || 'Erreur sauvegarde');
+            remoteSha = result.sha;
+            remoteSheets = newSheets;
+            sessionLignes = [];
+            renderSessionTable();
+            showStatus('✅ Enregistré avec succès');
+            await showAlert('Succès', `Les lignes ont été enregistrées dans ${selectedFolder} → ${selectedCat}.`);
+        } catch (e) {
+            console.error(e);
+            await showAlert('Erreur', 'Échec de l\'enregistrement : ' + (e.message || e));
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Enregistrer dans Excel';
+        }
+    });
+})();
 </script>
 </body>
 </html>

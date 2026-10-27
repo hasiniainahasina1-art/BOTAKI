@@ -6,6 +6,7 @@
     <title>BOTAKI - Édition DLV & Prix</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.5.0/dist/handsontable.full.min.css">
     <script src="https://cdn.jsdelivr.net/npm/handsontable@14.5.0/dist/handsontable.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --navy-deep: #131c42;
@@ -16,19 +17,45 @@
             --ink-muted: #a9b3d6;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+        }
         body {
             background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 100%);
             font-family: 'Segoe UI', system-ui, sans-serif;
             min-height: 100vh;
+            height: 100%;
             color: var(--ink);
-            padding: 0.8rem;
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        body.fullscreen-mode {
+            padding: 0;
+            background: #fff;
+        }
+        body.fullscreen-mode .top-bar,
+        body.fullscreen-mode .info,
+        body.fullscreen-mode .color-bar {
+            background: var(--navy-deep);
+            max-width: none;
+            margin: 0;
+            border-radius: 0;
+            padding: 0.45rem 0.75rem;
+        }
+        body.fullscreen-mode .grid-wrap {
+            max-width: none;
+            border-radius: 0;
+            flex: 1;
         }
         .top-bar {
-            max-width: 1100px;
-            margin: 0 auto 0.8rem;
+            max-width: none;
+            width: 100%;
+            margin: 0 0 0.45rem;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.6rem;
+            gap: 0.5rem;
             align-items: center;
         }
         .top-bar h1 {
@@ -58,28 +85,38 @@
             color: white;
         }
         .action-btn.save:disabled { opacity: 0.5; cursor: not-allowed; }
+        .action-btn.download {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .action-btn.fullscreen {
+            background: rgba(255,255,255,0.1);
+            color: var(--gold-light);
+        }
         .action-btn.back {
             background: transparent;
             color: var(--gold-light);
         }
         .info {
-            max-width: 1100px;
-            margin: 0 auto 0.6rem;
+            max-width: none;
+            width: 100%;
+            margin: 0 0 0.4rem;
             font-size: 0.8rem;
             color: var(--ink-muted);
         }
         .grid-wrap {
-            max-width: 1100px;
-            margin: 0 auto;
+            max-width: none;
+            width: 100%;
+            margin: 0;
+            flex: 1;
+            min-height: 0;
             background: white;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 30px rgba(0,0,0,0.25);
         }
-        #hot {
-            width: 100%;
-            min-height: 420px;
-        }
+        #hot { width: 100%; height: 100%; min-height: 300px; }
         .status {
             position: fixed;
             bottom: 14px;
@@ -133,6 +170,61 @@
             border: 1px solid rgba(255,255,255,0.3);
             color: var(--ink);
         }
+        .color-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin-right: 8px;
+            border: 1px solid rgba(0,0,0,0.2);
+            vertical-align: middle;
+        }
+        .color-bar {
+            max-width: none;
+            width: 100%;
+            margin: 0 0 0.45rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.6rem;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(244,180,0,0.25);
+            border-radius: 12px;
+        }
+        .color-bar-label { font-size: 0.75rem; color: var(--ink-muted); margin-right: 0.25rem; }
+        .color-mode {
+            padding: 0.25rem 0.55rem;
+            border-radius: 8px;
+            border: 1px solid rgba(244,180,0,0.35);
+            background: transparent;
+            color: var(--ink);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .color-mode.active {
+            background: var(--gold);
+            color: var(--navy-deep);
+            border-color: var(--gold);
+        }
+        .color-bar-sep {
+            width: 1px; height: 18px;
+            background: rgba(255,255,255,0.2);
+            margin: 0 0.2rem;
+        }
+        .color-dot {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.35);
+            cursor: pointer; padding: 0;
+        }
+        .color-dot.clear {
+            background: transparent; color: var(--ink);
+            font-size: 0.75rem; border-radius: 8px;
+            width: auto; padding: 0 0.4rem;
+        }
+        .color-dot:active { transform: scale(0.92); }
     </style>
 </head>
 <body>
@@ -141,6 +233,8 @@
         <h1>Édition DLV & Prix</h1>
         <button class="folder-btn" data-folder="KIBO4">KIBO4</button>
         <button class="folder-btn" data-folder="KIBO2">KIBO2</button>
+        <button class="action-btn download" id="downloadBtn" title="Télécharger Excel">⬇️ Télécharger</button>
+        <button class="action-btn fullscreen" id="fullscreenBtn" title="Plein écran">⛶ Plein écran</button>
         <button class="action-btn save" id="saveBtn" disabled>💾 Enregistrer</button>
     </div>
 
@@ -150,7 +244,15 @@
         <button class="sheet-btn" data-sheet="DPH">DPH</button>
     </div>
 
-    <div class="info" id="infoBar">Sélectionnez un dossier pour charger le fichier Excel.</div>
+    <div class="info" id="infoBar">Sélectionnez un dossier. Utilisez la barre de couleurs ou le clic droit.</div>
+
+    <div class="color-bar" id="colorBar">
+        <span class="color-bar-label">Couleur :</span>
+        <button type="button" class="color-mode active" data-mode="cell">Cellule</button>
+        <button type="button" class="color-mode" data-mode="row">Ligne</button>
+        <span class="color-bar-sep"></span>
+        <button type="button" class="color-dot clear" data-hex="" title="Enlever">✖</button>
+    </div>
 
     <div class="grid-wrap">
         <div id="hot"></div>
@@ -170,7 +272,19 @@
 <script>
 (function () {
     const API = '/api/dlv-prix';
-    const COLS = ['Code Barre', 'Code article', 'Désignation', 'Prix Normale', 'Prix promo', 'Quantité', 'Dlv'];
+    const COLS = ['Code Article', 'Désignation', 'Dlv', 'Quantité', 'Prix Normal', 'Prix promo'];
+    const COL_COUNT = 6;
+
+    const COLORS = [
+        { name: 'Rouge',   hex: '#fecaca' },
+        { name: 'Orange',  hex: '#fed7aa' },
+        { name: 'Jaune',   hex: '#fef08a' },
+        { name: 'Vert',    hex: '#bbf7d0' },
+        { name: 'Bleu',    hex: '#bfdbfe' },
+        { name: 'Violet',  hex: '#e9d5ff' },
+        { name: 'Rose',    hex: '#fbcfe8' },
+        { name: 'Gris',    hex: '#e5e7eb' }
+    ];
 
     let folder = null;
     let currentSheet = 'Épicerie';
@@ -178,10 +292,35 @@
     let sha = null;
     let hot = null;
     let dirty = false;
+    // cellColors[sheet][rowIndex][colIndex] = '#hex'  (rowIndex = index dans sheetsData)
+    let cellColors = { 'Épicerie': {}, 'Boisson': {}, 'DPH': {} };
 
     const infoBar = document.getElementById('infoBar');
     const saveBtn = document.getElementById('saveBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
     const statusEl = document.getElementById('status');
+
+    if (downloadBtn) downloadBtn.addEventListener('click', downloadExcel);
+    if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
+    window.addEventListener('resize', () => {
+        if (hot) {
+            hot.updateSettings({ height: computeGridHeight() });
+            hot.render();
+        }
+    });
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            document.body.classList.remove('fullscreen-mode');
+            if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Plein écran';
+        }
+        if (hot) {
+            setTimeout(() => {
+                hot.updateSettings({ height: computeGridHeight() });
+                hot.render();
+            }, 100);
+        }
+    });
 
     function showStatus(msg) {
         statusEl.textContent = msg;
@@ -206,7 +345,115 @@
         });
     }
 
-    // Folder selection
+    function markDirty() {
+        dirty = true;
+        saveBtn.disabled = false;
+    }
+
+    function computeGridHeight() {
+        const top = document.querySelector('.top-bar');
+        const top2 = document.querySelectorAll('.top-bar')[1];
+        const info = document.getElementById('infoBar');
+        const color = document.getElementById('colorBar');
+        let used = 24;
+        [top, top2, info, color].forEach(el => {
+            if (el) used += el.getBoundingClientRect().height + 8;
+        });
+        return Math.max(320, window.innerHeight - used);
+    }
+
+    function downloadExcel() {
+        if (!folder) {
+            showStatus('Choisissez d\'abord KIBO4 ou KIBO2');
+            return;
+        }
+        saveGridToSheets();
+        if (typeof XLSX === 'undefined') {
+            showStatus('Librairie Excel indisponible');
+            return;
+        }
+        const wb = XLSX.utils.book_new();
+        for (const sheetName of ['Épicerie', 'Boisson', 'DPH']) {
+            const rows = sheetsData[sheetName] || [];
+            const aoa = [];
+            const now = new Date();
+            const dateStr = String(now.getDate()).padStart(2,'0') + '/' +
+                String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear() + ' ' +
+                String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            aoa.push(['Date de mise à jour : ' + dateStr]);
+            aoa.push(COLS.slice());
+            rows.forEach(r => {
+                aoa.push([
+                    r.codeArticle || '',
+                    r.designation || '',
+                    r.dlv || '',
+                    r.quantite || '',
+                    r.prixNormale || '',
+                    r.prixPromo || ''
+                ]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            // Merge first row across columns
+            ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: COL_COUNT - 1 } }];
+            ws['!cols'] = [
+                { wch: 14 }, { wch: 40 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+        const fileName = folder + '_dlv-prix.xlsx';
+        XLSX.writeFile(wb, fileName);
+        showStatus('⬇️ Téléchargé : ' + fileName);
+    }
+
+    function toggleFullscreen() {
+        const btn = document.getElementById('fullscreenBtn');
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                document.body.classList.add('fullscreen-mode');
+                if (btn) btn.textContent = '⛶ Quitter';
+                setTimeout(() => { if (hot) { hot.updateSettings({ height: computeGridHeight() }); hot.render(); } }, 150);
+            }).catch(() => {
+                // Fallback CSS-only fullscreen
+                document.body.classList.add('fullscreen-mode');
+                if (btn) btn.textContent = '⛶ Quitter';
+                if (hot) { hot.updateSettings({ height: computeGridHeight() }); hot.render(); }
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                document.body.classList.remove('fullscreen-mode');
+                if (btn) btn.textContent = '⛶ Plein écran';
+                setTimeout(() => { if (hot) { hot.updateSettings({ height: computeGridHeight() }); hot.render(); } }, 150);
+            }).catch(() => {
+                document.body.classList.remove('fullscreen-mode');
+                if (btn) btn.textContent = '⛶ Plein écran';
+                if (hot) { hot.updateSettings({ height: computeGridHeight() }); hot.render(); }
+            });
+        }
+    }
+
+
+
+    function colorKey(row, col) {
+        return row + ',' + col;
+    }
+
+    function getColor(sheet, row, col) {
+        const map = cellColors[sheet] || {};
+        return map[colorKey(row, col)] || '';
+    }
+
+    function setColor(sheet, row, col, hex) {
+        if (!cellColors[sheet]) cellColors[sheet] = {};
+        const k = colorKey(row, col);
+        if (hex) cellColors[sheet][k] = hex;
+        else delete cellColors[sheet][k];
+    }
+
+    function setRowColor(sheet, row, hex) {
+        for (let c = 0; c < COL_COUNT; c++) setColor(sheet, row, c, hex);
+    }
+
+    // ----- Selection dossiers / feuilles -----
     document.querySelectorAll('.folder-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             if (dirty) {
@@ -220,11 +467,9 @@
         });
     });
 
-    // Sheet tabs
     document.querySelectorAll('.sheet-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', () => {
             if (!folder) return;
-            // Save current sheet data from grid before switching
             saveGridToSheets();
             document.querySelectorAll('.sheet-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
@@ -242,8 +487,20 @@
             if (!data.success) throw new Error(data.error || 'Erreur');
             sheetsData = data.sheets || { 'Épicerie': [], 'Boisson': [], 'DPH': [] };
             sha = data.sha;
+            // Restaurer les couleurs depuis _cellColors des lignes
+            cellColors = { 'Épicerie': {}, 'Boisson': {}, 'DPH': {} };
+            for (const sheet of Object.keys(sheetsData)) {
+                const rows = sheetsData[sheet] || [];
+                rows.forEach((r, ri) => {
+                    if (Array.isArray(r._cellColors)) {
+                        r._cellColors.forEach((hex, ci) => {
+                            if (hex) setColor(sheet, ri, ci, hex);
+                        });
+                    }
+                });
+            }
             dirty = false;
-            infoBar.textContent = `${folder}/dlv-prix.xlsx — Dernière MAJ : ${data.updateDate || '—'}`;
+            infoBar.textContent = `${folder}/dlv-prix.xlsx — Dernière MAJ : ${data.updateDate || '—'} · Clic droit pour colorer`;
             renderGrid();
             showStatus('Fichier chargé');
         } catch (e) {
@@ -255,35 +512,234 @@
 
     function rowsToMatrix(rows) {
         return rows.map(r => [
-            r.codeBarre || '',
             r.codeArticle || '',
             r.designation || '',
-            r.prixNormale || '',
-            r.prixPromo || '',
+            r.dlv || '',
             r.quantite || '',
-            r.dlv || ''
+            r.prixNormale || '',
+            r.prixPromo || ''
         ]);
     }
 
     function matrixToRows(matrix) {
-        return matrix
-            .filter(row => row.some(c => c !== null && c !== undefined && String(c).trim() !== ''))
-            .map(row => ({
-                codeBarre: String(row[0] || '').trim(),
-                codeArticle: String(row[1] || '').trim(),
-                designation: String(row[2] || '').trim(),
-                prixNormale: String(row[3] || '').trim(),
-                prixPromo: String(row[4] || '').trim(),
-                quantite: String(row[5] || '').trim(),
-                dlv: String(row[6] || '').trim()
-            }));
+        const rows = [];
+        matrix.forEach((row, visualRow) => {
+            const isEmpty = !row.some(c => c !== null && c !== undefined && String(c).trim() !== '');
+            if (isEmpty) return;
+            const colors = [];
+            for (let c = 0; c < COL_COUNT; c++) {
+                colors.push(getColor(currentSheet, visualRow, c) || '');
+            }
+            rows.push({
+                codeArticle: String(row[0] || '').trim(),
+                designation: String(row[1] || '').trim(),
+                dlv: String(row[2] || '').trim(),
+                quantite: String(row[3] || '').trim(),
+                prixNormale: String(row[4] || '').trim(),
+                prixPromo: String(row[5] || '').trim(),
+                _cellColors: colors
+            });
+        });
+        return rows;
     }
 
     function saveGridToSheets() {
         if (!hot) return;
         const data = hot.getData();
-        sheetsData[currentSheet] = matrixToRows(data);
+        // Capturer les couleurs depuis les meta Handsontable (source de vérité visuelle)
+        const newMap = {};
+        const rowCount = hot.countRows();
+        const colCount = Math.min(hot.countCols(), COL_COUNT);
+        for (let r = 0; r < rowCount; r++) {
+            for (let c = 0; c < colCount; c++) {
+                const meta = hot.getCellMeta(r, c);
+                if (meta && meta.bgColor) {
+                    newMap[colorKey(r, c)] = meta.bgColor;
+                }
+            }
+        }
+        cellColors[currentSheet] = newMap;
+
+        const rows = matrixToRows(data);
+        // Après filtrage, reconstruire la map avec les nouveaux index
+        const reindexed = {};
+        let dataIdx = 0;
+        data.forEach((row, visualRow) => {
+            const isEmpty = !row.some(c => c !== null && c !== undefined && String(c).trim() !== '');
+            if (isEmpty) return;
+            for (let c = 0; c < COL_COUNT; c++) {
+                const hex = newMap[colorKey(visualRow, c)];
+                if (hex) reindexed[colorKey(dataIdx, c)] = hex;
+            }
+            dataIdx++;
+        });
+        cellColors[currentSheet] = reindexed;
+        sheetsData[currentSheet] = rows;
     }
+
+    function applyColorsToGrid() {
+        if (!hot) return;
+        const map = cellColors[currentSheet] || {};
+        Object.keys(map).forEach(k => {
+            const [r, c] = k.split(',').map(Number);
+            if (r < hot.countRows() && c < COL_COUNT) {
+                hot.setCellMeta(r, c, 'bgColor', map[k]);
+            }
+        });
+        hot.render();
+    }
+
+    function parseDlvTs(str) {
+        if (!str) return 0;
+        const m = String(str).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (!m) return 0;
+        return new Date(+m[3], +m[2] - 1, +m[1]).getTime() || 0;
+    }
+
+    let colorMode = 'cell';
+
+    function forSelectionCells(selection, fn) {
+        (selection || []).forEach(sel => {
+            const r1 = Math.min(sel.start.row, sel.end.row);
+            const r2 = Math.max(sel.start.row, sel.end.row);
+            const c1 = Math.min(sel.start.col, sel.end.col);
+            const c2 = Math.max(sel.start.col, sel.end.col);
+            for (let r = r1; r <= r2; r++) {
+                for (let c = c1; c <= c2; c++) {
+                    if (c < COL_COUNT) fn(r, c);
+                }
+            }
+        });
+    }
+
+    function forSelectionRows(selection, fn) {
+        (selection || []).forEach(sel => {
+            const r1 = Math.min(sel.start.row, sel.end.row);
+            const r2 = Math.max(sel.start.row, sel.end.row);
+            for (let r = r1; r <= r2; r++) fn(r);
+        });
+    }
+
+    function rangesFromHot() {
+        if (!hot) return [];
+        const sel = hot.getSelectedRange();
+        if (!sel || !sel.length) return [];
+        return sel.map(range => ({
+            start: { row: range.from.row, col: range.from.col },
+            end: { row: range.to.row, col: range.to.col }
+        }));
+    }
+
+    function applyColorToSelection(hex) {
+        if (!hot) return;
+        const selection = rangesFromHot();
+        if (!selection.length) {
+            showStatus('Sélectionnez d\'abord une cellule');
+            return;
+        }
+        if (colorMode === 'row') {
+            forSelectionRows(selection, (r) => {
+                for (let c = 0; c < COL_COUNT; c++) {
+                    if (hex) {
+                        hot.setCellMeta(r, c, 'bgColor', hex);
+                        setColor(currentSheet, r, c, hex);
+                    } else {
+                        hot.setCellMeta(r, c, 'bgColor', undefined);
+                        setColor(currentSheet, r, c, '');
+                    }
+                }
+            });
+        } else {
+            forSelectionCells(selection, (r, c) => {
+                if (hex) {
+                    hot.setCellMeta(r, c, 'bgColor', hex);
+                    setColor(currentSheet, r, c, hex);
+                } else {
+                    hot.setCellMeta(r, c, 'bgColor', undefined);
+                    setColor(currentSheet, r, c, '');
+                }
+            });
+        }
+        hot.render();
+        markDirty();
+        showStatus(hex ? 'Couleur appliquée' : 'Couleur enlevée');
+    }
+
+    function buildColorSubmenu(prefix) {
+        const items = COLORS.map((col, i) => ({
+            key: prefix + ':' + i,
+            name: col.name,
+            callback: function () {
+                const selection = rangesFromHot();
+                if (!selection.length) return;
+                if (prefix === 'row_color') {
+                    forSelectionRows(selection, (r) => {
+                        for (let c = 0; c < COL_COUNT; c++) {
+                            hot.setCellMeta(r, c, 'bgColor', col.hex);
+                            setColor(currentSheet, r, c, col.hex);
+                        }
+                    });
+                } else {
+                    forSelectionCells(selection, (r, c) => {
+                        hot.setCellMeta(r, c, 'bgColor', col.hex);
+                        setColor(currentSheet, r, c, col.hex);
+                    });
+                }
+                hot.render();
+                markDirty();
+            }
+        }));
+        items.push({
+            key: prefix + ':none',
+            name: 'Enlever la couleur',
+            callback: function () {
+                const selection = rangesFromHot();
+                if (!selection.length) return;
+                if (prefix === 'row_color') {
+                    forSelectionRows(selection, (r) => {
+                        for (let c = 0; c < COL_COUNT; c++) {
+                            hot.setCellMeta(r, c, 'bgColor', undefined);
+                            setColor(currentSheet, r, c, '');
+                        }
+                    });
+                } else {
+                    forSelectionCells(selection, (r, c) => {
+                        hot.setCellMeta(r, c, 'bgColor', undefined);
+                        setColor(currentSheet, r, c, '');
+                    });
+                }
+                hot.render();
+                markDirty();
+            }
+        });
+        return items;
+    }
+
+    (function initColorBar() {
+        const bar = document.getElementById('colorBar');
+        if (!bar) return;
+        const clearBtn = bar.querySelector('.color-dot.clear');
+        COLORS.forEach(col => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'color-dot';
+            btn.style.background = col.hex;
+            btn.title = col.name;
+            btn.dataset.hex = col.hex;
+            bar.insertBefore(btn, clearBtn);
+        });
+        bar.addEventListener('click', (e) => {
+            const modeBtn = e.target.closest('.color-mode');
+            if (modeBtn) {
+                bar.querySelectorAll('.color-mode').forEach(b => b.classList.remove('active'));
+                modeBtn.classList.add('active');
+                colorMode = modeBtn.dataset.mode;
+                return;
+            }
+            const dot = e.target.closest('.color-dot');
+            if (dot) applyColorToSelection(dot.dataset.hex || '');
+        });
+    })();
 
     function renderGrid() {
         const container = document.getElementById('hot');
@@ -294,38 +750,64 @@
             hot = null;
         }
 
-        // Ensure at least a few empty rows for editing
-        while (data.length < 15) data.push(['', '', '', '', '', '', '', '']);
+        while (data.length < 15) data.push(['', '', '', '', '', '']);
 
         hot = new Handsontable(container, {
             data,
             colHeaders: COLS,
             rowHeaders: true,
             width: '100%',
-            height: Math.max(420, window.innerHeight - 200),
+            height: computeGridHeight(),
             stretchH: 'all',
             licenseKey: 'non-commercial-and-evaluation',
-            contextMenu: true,
             manualColumnResize: true,
             manualRowResize: true,
             filters: true,
             dropdownMenu: true,
             columnSorting: true,
             minSpareRows: 3,
-            afterChange: function (changes, source) {
-                if (source !== 'loadData') {
-                    dirty = true;
-                    saveBtn.disabled = false;
+            cells(row, col) {
+                const cellProps = {};
+                cellProps.renderer = function (instance, td, row, col, prop, value, cellProperties) {
+                    Handsontable.renderers.TextRenderer.apply(this, arguments);
+                    const bg = cellProperties.bgColor || getColor(currentSheet, row, col);
+                    td.style.backgroundColor = bg || '';
+                };
+                return cellProps;
+            },
+            contextMenu: {
+                items: {
+                    'row_above': { name: 'Insérer ligne au-dessus' },
+                    'row_below': { name: 'Insérer ligne en-dessous' },
+                    'remove_row': { name: 'Supprimer la ligne' },
+                    'sp1': { name: '---------' },
+                    'copy': { name: 'Copier' },
+                    'cut': { name: 'Couper' },
+                    'sp2': { name: '---------' },
+                    'bg_color': {
+                        name: 'Couleur de fond',
+                        submenu: { items: buildColorSubmenu('bg_color') }
+                    },
+                    'row_color': {
+                        name: 'Colorer la ligne',
+                        submenu: { items: buildColorSubmenu('row_color') }
+                    }
                 }
             },
-            afterCreateRow: () => { dirty = true; saveBtn.disabled = false; },
-            afterRemoveRow: () => { dirty = true; saveBtn.disabled = false; }
+            afterChange(changes, source) {
+                if (source !== 'loadData') markDirty();
+            },
+            afterCreateRow() { markDirty(); },
+            afterRemoveRow() { markDirty(); }
         });
+
+        // Appliquer les couleurs déjà connues
+        applyColorsToGrid();
     }
 
     saveBtn.addEventListener('click', async () => {
         if (!folder || !hot) return;
-        const ok = await confirmDialog('Enregistrer', `Enregistrer les modifications dans ${folder}/dlv-prix.xlsx ?`);
+        const ok = await confirmDialog('Enregistrer', `Enregistrer les modifications (avec couleurs) dans ${folder}/dlv-prix.xlsx ?`);
         if (!ok) return;
 
         saveBtn.disabled = true;
@@ -334,6 +816,29 @@
 
         try {
             saveGridToSheets();
+
+            // Injecter _cellColors + tri DLV la plus proche (ancienne) en haut
+            for (const sheet of Object.keys(sheetsData)) {
+                const rows = sheetsData[sheet] || [];
+                const map = cellColors[sheet] || {};
+                rows.forEach((r, ri) => {
+                    const colors = [];
+                    for (let c = 0; c < COL_COUNT; c++) {
+                        colors.push(map[colorKey(ri, c)] || '');
+                    }
+                    r._cellColors = colors;
+                });
+                rows.sort((a, b) => (parseDlvTs(a.dlv) || Number.MAX_SAFE_INTEGER) - (parseDlvTs(b.dlv) || Number.MAX_SAFE_INTEGER));
+                // Reconstruire cellColors après le tri
+                const newMap = {};
+                rows.forEach((r, ri) => {
+                    (r._cellColors || []).forEach((hex, ci) => {
+                        if (hex) newMap[colorKey(ri, ci)] = hex;
+                    });
+                });
+                cellColors[sheet] = newMap;
+                sheetsData[sheet] = rows;
+            }
 
             const now = new Date();
             const dateStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -362,7 +867,6 @@
         }
     });
 
-    // Warn before leave if dirty
     window.addEventListener('beforeunload', (e) => {
         if (dirty) {
             e.preventDefault();
